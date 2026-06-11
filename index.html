@@ -458,7 +458,9 @@ function caixaPanel(c){
   var patr=c.caixa+c.balance;
   var body;
   if(isAmbos){
-    body='<div class="hl-caixa-val">'+money(c.caixa)+'</div><div class="hl-caixa-sub">soma das reservas de Ricardo e Lais</div>';
+    body='<div class="hl-caixa-val">'+money(c.caixa)+'</div>'
+      +'<div class="hl-caixa-sub">soma das reservas de Ricardo e Lais</div>'
+      +'<div class="hl-caixa-sub">projeção ao fim do ciclo: <b style="color:#cfe0ff">'+money(patr)+'</b></div>';
   } else if(state.caixaEdit){
     body='<div class="hl-caixa-edit"><input type="number" inputmode="decimal" id="caixa-input" placeholder="0,00" value="'+c.caixa+'"><button data-act="caixa-save">Salvar</button></div>';
   } else {
