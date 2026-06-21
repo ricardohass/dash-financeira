@@ -45,7 +45,7 @@ select,input{font-family:Inter;}
 .hl-status.good{color:#9be8b4;background:rgba(67,224,106,.07);border-color:rgba(67,224,106,.25);}
 .hl-status.bad{color:#ff9aa4;background:rgba(255,59,74,.07);border-color:rgba(255,59,74,.25);}
 
-.hl-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.hl-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
 .hl-hud{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.03),transparent),var(--hull);border:1px solid var(--line);
   border-radius:14px;padding:16px 16px 14px;overflow:hidden;}
 .hl-hud::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--a);box-shadow:0 0 14px var(--a);}
@@ -350,6 +350,10 @@ function compute(){
   var totalExp=mExp.reduce(function(s,e){return s+Number(e.amount||0);},0);
   var totalInc=mInc.reduce(function(s,e){return s+Number(e.amount||0);},0);
   var balance=totalInc-totalExp, savings=totalInc>0?balance/totalInc*100:0;
+  var allExpAll=set.expenses.reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var allIncAll=set.income.reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var allBalance=allIncAll-allExpAll;
+  var saldoTotal=Number(set.caixa||0)+allBalance;
   var pm=prevYM(m);
   var prevExp=set.expenses.filter(function(e){return (e.date||"").slice(0,7)===pm;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
   var deltaExp=prevExp>0?(totalExp-prevExp)/prevExp*100:null;
@@ -369,7 +373,8 @@ function compute(){
     .sort(function(a,b){return a.date<b.date?1:-1;});
   return {mExp:mExp,mInc:mInc,totalExp:totalExp,totalInc:totalInc,balance:balance,savings:savings,
     deltaExp:deltaExp,prevYM:pm,ranking:ranking,banks:banks,formas:formas,weeks:weeks,weeksInc:weeksInc,biggest:biggest,
-    avgWeek:avgWeek,activeWeeks:activeWeeks,tx:tx,caixa:set.caixa};
+    avgWeek:avgWeek,activeWeeks:activeWeeks,tx:tx,caixa:set.caixa,
+    allExp:allExpAll,allInc:allIncAll,allBalance:allBalance,saldoTotal:saldoTotal};
 }
 
 /* ---------- selects de data (PT) ---------- */
@@ -572,6 +577,7 @@ function render(){
       +hud("Recompensas","entradas de clientes",money(c.totalInc),"#43e06a")
       +hud("Lado sombrio","gastos do ciclo",money(c.totalExp),"#ff3b4a",c.deltaExp!=null?((c.deltaExp>=0?"\u25B2":"\u25BC")+" "+pct(Math.abs(c.deltaExp))+" vs "+ymLabel(c.prevYM)):null,c.deltaExp!=null&&c.deltaExp<0)
       +hud("A Força","saldo do ciclo",money(c.balance),good?"#2ea6ff":"#ff3b4a")
+      +hud("Tesouro total","reserva + tudo acumulado",money(c.saldoTotal),c.saldoTotal>=0?"#43e06a":"#ff3b4a")
     +'</section>'
     +'<div class="hl-grid"><div class="hl-col">'+leftCol+caixaPanel(c)
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Por banco</h2><p>visão de apoio</p></div></div>'+banksHtml+'</section>'
