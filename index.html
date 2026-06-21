@@ -144,6 +144,31 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .hl-bank-bar i{display:block;height:100%;background:linear-gradient(90deg,#ffd84d,#ff9a3c);box-shadow:0 0 10px -2px #ffd84d;border-radius:99px;}
 .hl-bank-val{font-family:Orbitron;font-size:11px;color:#fff;}
 
+/* Quadro de patrimonio (fluxo x estoque) */
+.hl-quadro{display:flex;flex-direction:column;gap:10px;}
+.hl-qrow{display:grid;grid-template-columns:1.1fr 1fr 1fr;align-items:center;gap:12px;background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+.hl-qrow.total{background:rgba(67,224,106,.07);border-color:rgba(67,224,106,.3);}
+.hl-qrow.on{box-shadow:0 0 0 1px rgba(255,255,255,.18);}
+.hl-qname{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);}
+.hl-qname i{width:10px;height:10px;border-radius:99px;display:inline-block;}
+.hl-qcell{display:flex;flex-direction:column;gap:2px;}
+.hl-qcell small{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);}
+.hl-qcell b{font-family:Orbitron;font-size:15px;color:#fff;}
+.hl-qcell b.pos{color:#43e06a;} .hl-qcell b.neg{color:#ff3b4a;}
+
+/* Evolucao do patrimonio (mes a mes) */
+.hl-evo{display:flex;flex-direction:column;gap:8px;}
+.hl-evohead,.hl-evorow{display:grid;grid-template-columns:90px 120px 1fr;align-items:center;gap:12px;}
+.hl-evohead{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:0 4px 4px;}
+.hl-evorow{background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:10px;padding:9px 12px;}
+.hl-evorow.on{box-shadow:0 0 0 1px rgba(46,166,255,.4);background:rgba(46,166,255,.06);}
+.hl-evo-m{font-weight:600;color:var(--ink);font-size:13px;}
+.hl-evo-res{font-family:Orbitron;font-size:12px;}
+.hl-evo-res.pos{color:#43e06a;} .hl-evo-res.neg{color:#ff3b4a;}
+.hl-evo-track{position:relative;height:22px;background:rgba(255,255,255,.05);border-radius:99px;overflow:hidden;display:flex;align-items:center;}
+.hl-evo-track i{position:absolute;left:0;top:0;height:100%;border-radius:99px;opacity:.35;}
+.hl-evo-track b{position:relative;font-family:Orbitron;font-size:11px;color:#fff;padding-left:10px;}
+
 .hl-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0;}
 .hl-fact{background:var(--hull);border:1px solid var(--line);border-radius:12px;padding:14px;}
 .hl-fact-label{font-size:11px;color:var(--mut);}
@@ -184,6 +209,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .hl-kpis{grid-template-columns:1fr;}
   .hl-row2{grid-template-columns:1fr;}
   .hl-facts{grid-template-columns:1fr;}
+  .hl-qrow{grid-template-columns:1fr;gap:8px;}
+  .hl-evohead{display:none;}
+  .hl-evorow{grid-template-columns:80px 100px 1fr;gap:8px;}
   .saber-row{grid-template-columns:100px 1fr auto;}
   .hl-title{font-size:27px;}
 }
@@ -350,8 +378,11 @@ function compute(){
   var totalExp=mExp.reduce(function(s,e){return s+Number(e.amount||0);},0);
   var totalInc=mInc.reduce(function(s,e){return s+Number(e.amount||0);},0);
   var balance=totalInc-totalExp, savings=totalInc>0?balance/totalInc*100:0;
-  // dinheiro guardado: valor manual e puro (Ricardo + Lais na Galaxia). Nao soma com ciclo nem acumulado.
-  var saldoTotal=Number(set.caixa||0);
+  // ESTOQUE (patrimonio): saldo inicial manual + soma dos resultados ate o mes selecionado
+  var saldoInicial=Number(set.caixa||0);
+  var incAcum=set.income.filter(function(e){return (e.date||"").slice(0,7)<=m;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var expAcum=set.expenses.filter(function(e){return (e.date||"").slice(0,7)<=m;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var saldoAcumulado=saldoInicial+incAcum-expAcum;
   var pm=prevYM(m);
   var prevExp=set.expenses.filter(function(e){return (e.date||"").slice(0,7)===pm;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
   var deltaExp=prevExp>0?(totalExp-prevExp)/prevExp*100:null;
@@ -371,7 +402,41 @@ function compute(){
     .sort(function(a,b){return a.date<b.date?1:-1;});
   return {mExp:mExp,mInc:mInc,totalExp:totalExp,totalInc:totalInc,balance:balance,savings:savings,
     deltaExp:deltaExp,prevYM:pm,ranking:ranking,banks:banks,formas:formas,weeks:weeks,weeksInc:weeksInc,biggest:biggest,
-    avgWeek:avgWeek,activeWeeks:activeWeeks,tx:tx,caixa:set.caixa,saldoTotal:saldoTotal};
+    avgWeek:avgWeek,activeWeeks:activeWeeks,tx:tx,caixa:set.caixa,
+    saldoInicial:saldoInicial,saldoAcumulado:saldoAcumulado};
+}
+
+/* ---------- fluxo (mes) x estoque (acumulado) por conjunto de dados ---------- */
+function fluxoEstoque(d, m){
+  function sum(arr,pred){ return arr.filter(pred).reduce(function(s,e){return s+Number(e.amount||0);},0); }
+  var inc=d.income||[], exp=d.expenses||[];
+  var resMes = sum(inc,function(e){return (e.date||"").slice(0,7)===m;}) - sum(exp,function(e){return (e.date||"").slice(0,7)===m;});
+  var acum = Number(d.caixa||0) + sum(inc,function(e){return (e.date||"").slice(0,7)<=m;}) - sum(exp,function(e){return (e.date||"").slice(0,7)<=m;});
+  return { res:resMes, acum:acum, inicial:Number(d.caixa||0) };
+}
+// quadro por responsavel + consolidado, no mes selecionado
+function quadroPatrimonio(m){
+  var r=fluxoEstoque(state.data.ricardo,m), l=fluxoEstoque(state.data.lais,m);
+  return [
+    {id:"ricardo",nome:"Ricardo",res:r.res,acum:r.acum},
+    {id:"lais",nome:"Lais",res:l.res,acum:l.acum},
+    {id:"ambos",nome:"Galáxia",res:r.res+l.res,acum:r.acum+l.acum}
+  ];
+}
+// evolucao mes a mes (resultado e acumulado ao fim de cada mes) do conjunto selecionado
+function evolucao(set){
+  function sum(arr,pred){ return arr.filter(pred).reduce(function(s,e){return s+Number(e.amount||0);},0); }
+  var mset={};
+  (set.income||[]).forEach(function(e){var ym=(e.date||"").slice(0,7); if(ym) mset[ym]=true;});
+  (set.expenses||[]).forEach(function(e){var ym=(e.date||"").slice(0,7); if(ym) mset[ym]=true;});
+  var months=Object.keys(mset).sort();
+  var acum=Number(set.caixa||0);
+  return months.map(function(ym){
+    var inc=sum(set.income,function(e){return (e.date||"").slice(0,7)===ym;});
+    var exp=sum(set.expenses,function(e){return (e.date||"").slice(0,7)===ym;});
+    var res=inc-exp; acum+=res;
+    return {ym:ym, inc:inc, exp:exp, res:res, acum:acum};
+  });
 }
 
 /* ---------- selects de data (PT) ---------- */
@@ -459,16 +524,18 @@ function caixaPanel(c){
   var isAmbos=state.profile==="ambos";
   var body;
   if(isAmbos){
-    body='<div class="hl-caixa-val">'+money(c.caixa)+'</div>'
-      +'<div class="hl-caixa-sub">soma do dinheiro guardado de Ricardo e Lais</div>';
+    body='<div class="hl-caixa-val">'+money(c.saldoInicial)+'</div>'
+      +'<div class="hl-caixa-sub">soma do ponto de partida de Ricardo e Lais</div>'
+      +'<div class="hl-caixa-sub">patrimônio em '+ymLabel(state.month)+': <b style="color:#cfe0ff">'+money(c.saldoAcumulado)+'</b></div>';
   } else if(state.caixaEdit){
     body='<div class="hl-caixa-edit"><input type="number" inputmode="decimal" id="caixa-input" placeholder="0,00" value="'+c.caixa+'"><button data-act="caixa-save">Salvar</button></div>';
   } else {
-    body='<div class="hl-caixa-val">'+money(c.caixa)+'</div>'
-      +'<div class="hl-caixa-sub">valor preenchido manualmente</div>'
-      +'<div class="hl-tools"><button class="hl-ghost" data-act="caixa-edit">Atualizar valor</button></div>';
+    body='<div class="hl-caixa-val">'+money(c.saldoInicial)+'</div>'
+      +'<div class="hl-caixa-sub">quanto já tinha guardado antes de começar</div>'
+      +'<div class="hl-caixa-sub">patrimônio em '+ymLabel(state.month)+': <b style="color:#cfe0ff">'+money(c.saldoAcumulado)+'</b></div>'
+      +'<div class="hl-tools"><button class="hl-ghost" data-act="caixa-edit">Ajustar ponto de partida</button></div>';
   }
-  return '<section class="hl-panel"><div class="hl-panel-head"><div><h2>Reserva da Aliança</h2><p>dinheiro guardado (em caixa)</p></div></div>'+body+'</section>';
+  return '<section class="hl-panel"><div class="hl-panel-head"><div><h2>Ponto de partida</h2><p>saldo inicial (antes do 1º mês)</p></div></div>'+body+'</section>';
 }
 
 /* ---------- login ---------- */
@@ -554,6 +621,34 @@ function render(){
         +'<button class="hl-tx-act del" data-act="del" data-id="'+t.id+'" data-kind="'+t.kind+'" data-p="'+t._p+'" title="Remover">&times;</button></div>';}).join("")+'</div>';
 
   var editingCls=state.editing?" editing":"";
+  // QUADRO: fluxo (resultado do mes) x estoque (acumulado) por responsavel + consolidado
+  var quadro=quadroPatrimonio(state.month);
+  var quadroHtml='<div class="hl-quadro">'+quadro.map(function(q){
+    var prof=PROFILES.filter(function(p){return p.id===q.id;})[0];
+    var col=prof?prof.color:"#7d8aa8";
+    return '<div class="hl-qrow'+(q.id==="ambos"?" total":"")+(q.id===state.profile?" on":"")+'">'
+      +'<span class="hl-qname"><i style="background:'+col+'"></i>'+q.nome+'</span>'
+      +'<span class="hl-qcell"><small>resultado do mês</small><b class="'+(q.res>=0?"pos":"neg")+'">'+(q.res>=0?"+ ":"− ")+money(Math.abs(q.res))+'</b></span>'
+      +'<span class="hl-qcell"><small>saldo acumulado</small><b>'+money(q.acum)+'</b></span>'
+      +'</div>';
+  }).join("")+'</div>';
+
+  // EVOLUCAO: resultado e patrimonio acumulado ao fim de cada mes (conjunto selecionado)
+  var evo=evolucao(taggedSet());
+  var evoHtml;
+  if(evo.length===0){ evoHtml=emptyBox("Sem meses registrados ainda."); }
+  else {
+    var maxA=Math.max.apply(null,evo.map(function(x){return Math.abs(x.acum);}).concat([1]));
+    evoHtml='<div class="hl-evo"><div class="hl-evohead"><span>Mês</span><span>Resultado</span><span>Patrimônio acumulado</span></div>'
+      +evo.map(function(x){
+        return '<div class="hl-evorow'+(x.ym===state.month?" on":"")+'">'
+          +'<span class="hl-evo-m">'+ymLabel(x.ym)+'</span>'
+          +'<span class="hl-evo-res '+(x.res>=0?"pos":"neg")+'">'+(x.res>=0?"+ ":"− ")+money(Math.abs(x.res))+'</span>'
+          +'<span class="hl-evo-track"><i style="width:'+(Math.abs(x.acum)/maxA*100)+'%;background:'+(x.acum>=0?"#43e06a":"#ff3b4a")+'"></i><b>'+money(x.acum)+'</b></span>'
+          +'</div>';
+      }).join("")+'</div>';
+  }
+
   var leftCol=isAmbos
     ? '<section class="hl-panel"><div class="hl-panel-head"><div><h2>Sala de comando</h2></div></div><p class="hl-note">A Galáxia mostra a visão combinada de Ricardo e Lais. Para lançar ou editar, escolha um dos dois esquadrões acima. Editar um registro daqui leva você direto pro esquadrão dono dele.</p></section>'
     : '<section class="hl-panel'+editingCls+'"><div class="hl-panel-head"><div><h2>'+(state.editing?"Editar registro":"Novo registro")+'</h2></div>'
@@ -571,12 +666,14 @@ function render(){
       +hud("Recompensas","entradas de clientes",money(c.totalInc),"#43e06a")
       +hud("Lado sombrio","gastos do ciclo",money(c.totalExp),"#ff3b4a",c.deltaExp!=null?((c.deltaExp>=0?"\u25B2":"\u25BC")+" "+pct(Math.abs(c.deltaExp))+" vs "+ymLabel(c.prevYM)):null,c.deltaExp!=null&&c.deltaExp<0)
       +hud("A Força","saldo do ciclo",money(c.balance),good?"#2ea6ff":"#ff3b4a")
-      +hud("Tesouro total","dinheiro guardado (Ricardo + Lais)",money(c.saldoTotal),c.saldoTotal>=0?"#43e06a":"#ff3b4a")
+      +hud("Patrimônio","saldo acumulado até "+ymLabel(state.month),money(c.saldoAcumulado),c.saldoAcumulado>=0?"#43e06a":"#ff3b4a")
     +'</section>'
     +'<div class="hl-grid"><div class="hl-col">'+leftCol+caixaPanel(c)
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Por banco</h2><p>visão de apoio</p></div></div>'+banksHtml+'</section>'
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Por forma de pagamento</h2><p>PIX, cartão, etc.</p></div></div>'+formasHtml+'</section></div>'
       +'<div class="hl-col wide">'
+        +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Patrimônio por responsável</h2><p>fluxo (resultado do mês) x estoque (acumulado) em '+ymLabel(state.month)+'</p></div></div>'+quadroHtml+'</section>'
+        +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Evolução do patrimônio</h2><p>quanto existia no fechamento de cada mês'+(isAmbos?" (Galáxia)":"")+'</p></div></div>'+evoHtml+'</section>'
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Os mais procurados</h2><p>onde a Força mais escapou neste ciclo</p></div></div>'+sabers+'</section>'
         +'<div class="hl-row2"><section class="hl-panel"><div class="hl-panel-head"><div><h2>Mapa de tipos</h2><p>distribuição de gastos</p></div></div>'+donut+'</section>'
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Linha do tempo</h2><p>entrou x saiu por semana</p></div></div>'+weeksHtml+'</section></div>'
