@@ -268,16 +268,13 @@ function lsSave(p){ try{ localStorage.setItem("holocron:"+p, JSON.stringify(stat
 
 function rowToApp(r){
   if(r.tipo==="entrada") return { id:r.id, date:r.data, client:r.cliente, amount:Number(r.valor), note:r.nota||"" };
-  return { id:r.id, date:r.data, pago:r.data_pagamento||null, category:r.categoria, bank:r.banco, forma:r.forma, amount:Number(r.valor), note:r.nota||"" };
+  return { id:r.id, date:r.data, category:r.categoria, bank:r.banco, forma:r.forma, amount:Number(r.valor), note:r.nota||"" };
 }
 function appToRow(perfil, kind, rec){
-  var row = { perfil:perfil, tipo: kind==="expense"?"gasto":"entrada", data:rec.date, valor:rec.amount,
+  return { perfil:perfil, tipo: kind==="expense"?"gasto":"entrada", data:rec.date, valor:rec.amount,
     categoria: kind==="expense"?(rec.category||null):null, banco: kind==="expense"?(rec.bank||null):null,
     forma: kind==="expense"?(rec.forma||null):null,
     cliente: kind==="income"?(rec.client||null):null, nota:rec.note||null };
-  // só envia a data de pagamento quando informada, pra não quebrar caso a coluna ainda nao exista no banco
-  if(kind==="expense" && rec.pago) row.data_pagamento = rec.pago;
-  return row;
 }
 
 async function dataLoad(){
@@ -386,8 +383,8 @@ function yearOpts(sel){ var y=new Date().getFullYear(),o=""; for(var i=y-2;i<=y+
 function isoToBR(iso){ if(!iso) return ""; var a=iso.split("-"); return a[2]+"/"+a[1]+"/"+a[0]; }
 function brToIso(br){ var m=String(br||"").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(!m) return null; var d=+m[1],mo=+m[2],y=+m[3]; if(mo<1||mo>12||d<1||d>31) return null; return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
 function defaultDateBR(){ var t=new Date(); return String(Math.min(28,t.getDate())).padStart(2,"0")+"/"+state.month.slice(5,7)+"/"+state.month.slice(0,4); }
-function dateField(prefix, isoOrNull, allowEmpty){
-  var v = isoOrNull ? isoToBR(isoOrNull) : (allowEmpty ? "" : defaultDateBR());
+function dateField(prefix, isoOrNull){
+  var v = isoOrNull ? isoToBR(isoOrNull) : defaultDateBR();
   return '<input type="text" id="'+prefix+'-date" class="hl-datefield" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" value="'+v+'">';
 }
 function readDate(prefix){ return brToIso(document.getElementById(prefix+"-date").value); }
@@ -437,8 +434,7 @@ function formaSelect(value){
 function expenseForm(){
   var ed=state.editing&&state.editing.kind==="expense"?state.editing:null;
   return '<div class="hl-form">'
-    +'<label class="hl-field"><span>Data da compra</span>'+dateField("ex", ed?ed.date:null)+'</label>'
-    +'<label class="hl-field"><span>Data de pagamento <small style="opacity:.6">(opcional)</small></span>'+dateField("ex-pay", ed?ed.pago:null, true)+'</label>'
+    +'<label class="hl-field"><span>Data do pagamento</span>'+dateField("ex", ed?ed.date:null)+'</label>'
     +'<label class="hl-field"><span>Valor (R$)</span><input type="number" inputmode="decimal" id="ex-amount" placeholder="0,00" value="'+(ed?ed.amount:"")+'"></label>'
     +'<label class="hl-field"><span>Categoria</span>'+catSelect(ed?ed.category:"Mercado")+'</label>'
     +'<label class="hl-field"><span>Banco</span>'+bankSelect(ed?ed.bank:"")+'</label>'
@@ -555,8 +551,7 @@ function render(){
   var txHtml=c.tx.length===0?emptyBox("Nada registrado neste ciclo ainda.")
     :'<div class="hl-tx">'+c.tx.map(function(t){
       var title=t.kind==="income"?(t.client||"Entrada"):t.category;
-      var pagoTxt=(t.kind==="expense"&&t.pago&&t.pago!==t.date)?("pago "+t.pago.slice(8,10)+"/"+t.pago.slice(5,7)):"";
-      var sub=t.kind==="income"?(t.note||"recompensa"):[t.note,t.bank,t.forma,pagoTxt].filter(Boolean).join(" · ");
+      var sub=t.kind==="income"?(t.note||"recompensa"):[t.note,t.bank,t.forma].filter(Boolean).join(" · ");
       var dot=t.kind==="income"?"#43e06a":colorFor(t.category,0);
       return '<div class="hl-txrow '+t.kind+'"><span class="hl-tx-date">'+t.date.slice(8,10)+'/'+t.date.slice(5,7)+'</span><span class="hl-tx-dot" style="background:'+dot+'"></span>'
         +'<span class="hl-tx-main"><b>'+esc(title)+'</b><small>'+esc(sub)+'</small></span><span class="hl-tx-val '+t.kind+'">'+(t.kind==="income"?"+":"\u2212")+' '+money(t.amount)+'</span>'
@@ -601,11 +596,8 @@ function readExpense(){
   var amount=Number(document.getElementById("ex-amount").value);
   if(!(amount>0)){ alert("Informe um valor maior que zero."); return null; }
   var date=readDate("ex");
-  if(!date){ alert("Data da compra inválida. Use o formato dd/mm/aaaa."); return null; }
-  var payRaw=(document.getElementById("ex-pay-date").value||"").trim();
-  var pago=null;
-  if(payRaw){ pago=brToIso(payRaw); if(!pago){ alert("Data de pagamento inválida. Use o formato dd/mm/aaaa ou deixe em branco."); return null; } }
-  return { date:date, pago:pago, category:document.getElementById("ex-cat").value, bank:document.getElementById("ex-bank").value.trim(), forma:document.getElementById("ex-forma").value, amount:amount, note:document.getElementById("ex-note").value.trim() };
+  if(!date){ alert("Data inválida. Use o formato dd/mm/aaaa."); return null; }
+  return { date:date, category:document.getElementById("ex-cat").value, bank:document.getElementById("ex-bank").value.trim(), forma:document.getElementById("ex-forma").value, amount:amount, note:document.getElementById("ex-note").value.trim() };
 }
 function readIncome(){
   var amount=Number(document.getElementById("in-amount").value);
