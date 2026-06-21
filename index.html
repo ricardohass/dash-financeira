@@ -564,7 +564,6 @@ function render(){
     : '<section class="hl-panel'+editingCls+'"><div class="hl-panel-head"><div><h2>'+(state.editing?"Editar registro":"Novo registro")+'</h2></div>'
       +(state.editing?'':'<div class="hl-switch"><button class="'+(state.mode==="expense"?"on":"")+'" data-act="mode" data-id="expense">Gasto</button><button class="'+(state.mode==="income"?"on":"")+'" data-act="mode" data-id="income">Entrada</button></div>')
       +'</div>'+(state.mode==="expense"?expenseForm():incomeForm())
-      +(state.editing?'':'<div class="hl-tools"><button class="hl-ghost" data-act="seed">Dados de exemplo</button><button class="hl-ghost danger" data-act="clear">Limpar perfil</button></div>')
       +'</section>';
 
   document.getElementById("app").innerHTML=
