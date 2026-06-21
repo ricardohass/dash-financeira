@@ -224,12 +224,12 @@ function weekOfMonth(iso){ return Math.min(5, Math.ceil(Number(iso.slice(8,10))/
 
 var SABER = {
   "Aluguel":"#ff3b4a","Contas de casa":"#a855f7","Mercado":"#43e06a","Transporte":"#2ea6ff",
-  "Saídas":"#ff9a3c","Lazer":"#22d3ee","Impulsos positivos":"#7dffb0","Saúde":"#f5f7ff",
-  "Assinaturas":"#ff5ed1","Educação":"#ffd84d","Restaurante":"#ffb648",
-  "Investimento":"#5ec8ff","Presentes":"#ff84d8","Outros":"#7d8aa8"
+  "Saúde":"#f5f7ff","Hobbies":"#22d3ee","Restaurante":"#ffb648","Educação":"#ffd84d",
+  "Investimentos":"#5ec8ff","Presentes":"#ff84d8","Roupas/maquiagem/higiene pessoal":"#ff5ed1",
+  "Outros":"#7d8aa8"
 };
 var SABER_FALLBACK = ["#2ea6ff","#43e06a","#ff3b4a","#a855f7","#ff9a3c","#22d3ee","#ffd84d","#ff5ed1"];
-var DEFAULT_CATEGORIES = ["Aluguel","Contas de casa","Mercado","Transporte","Saídas","Lazer","Impulsos positivos","Saúde","Assinaturas","Educação","Restaurante","Investimento","Presentes"];
+var DEFAULT_CATEGORIES = ["Aluguel","Contas de casa","Mercado","Transporte","Saúde","Hobbies","Restaurante","Educação","Investimentos","Presentes","Roupas/maquiagem/higiene pessoal"];
 var BANK_SUGGESTIONS = ["Nubank","Itaú","Inter","Bradesco","Santander","Banco do Brasil","C6","PicPay","Dinheiro"];
 var FORMAS = ["PIX","Crédito","Débito","Dinheiro","Boleto"];
 function colorFor(cat,i){ return SABER[cat] || SABER_FALLBACK[(i||0)%SABER_FALLBACK.length]; }
@@ -323,8 +323,8 @@ async function loadSeed(){
   recs.push(["expense",{date:d(8),category:"Transporte",bank:"Nubank",amount:240,note:"Combustível"}]);
   recs.push(["expense",{date:d(12),category:"Contas de casa",bank:"Inter",amount:320,note:"Luz e internet"}]);
   recs.push(["expense",{date:d(16),category:"Restaurante",bank:"Nubank",amount:180,note:"Jantar"}]);
-  recs.push(["expense",{date:d(20),category:"Impulsos positivos",bank:"Inter",amount:95,note:"Livro"}]);
-  recs.push(["expense",{date:d(22),category:"Assinaturas",bank:"Nubank",amount:55,note:"Streaming"}]);
+  recs.push(["expense",{date:d(20),category:"Hobbies",bank:"Inter",amount:95,note:"Livro"}]);
+  recs.push(["expense",{date:d(22),category:"Hobbies",bank:"Nubank",amount:55,note:"Streaming"}]);
   base.cli.forEach(function(o,i){ recs.push(["income",{date:d(2+i*10),client:o.c,amount:o.v,note:"Pagamento cliente"}]); });
   for(var k=0;k<recs.length;k++){ await addRecord(id, recs[k][0], recs[k][1]); }
   render();
