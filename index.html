@@ -254,10 +254,10 @@ var SABER = {
   "Aluguel":"#ff3b4a","Contas de casa":"#a855f7","Mercado":"#43e06a","Transporte":"#2ea6ff",
   "Saúde":"#f5f7ff","Hobbies":"#22d3ee","Restaurante":"#ffb648","Educação":"#ffd84d",
   "Investimentos":"#5ec8ff","Presentes":"#ff84d8","Roupas/maquiagem/higiene pessoal":"#ff5ed1",
-  "Outros":"#7d8aa8"
+  "Estudo":"#7c5cff","Trabalho":"#00d1b2","Outros":"#7d8aa8"
 };
 var SABER_FALLBACK = ["#2ea6ff","#43e06a","#ff3b4a","#a855f7","#ff9a3c","#22d3ee","#ffd84d","#ff5ed1"];
-var DEFAULT_CATEGORIES = ["Aluguel","Contas de casa","Mercado","Transporte","Saúde","Hobbies","Restaurante","Educação","Investimentos","Presentes","Roupas/maquiagem/higiene pessoal"];
+var DEFAULT_CATEGORIES = ["Aluguel","Contas de casa","Mercado","Transporte","Saúde","Hobbies","Restaurante","Educação","Estudo","Trabalho","Investimentos","Presentes","Roupas/maquiagem/higiene pessoal"];
 var BANK_SUGGESTIONS = ["Nubank","Itaú","Inter","Bradesco","Santander","Banco do Brasil","C6","PicPay","Dinheiro"];
 var FORMAS = ["PIX","Crédito","Débito","Dinheiro","Boleto"];
 function colorFor(cat,i){ return SABER[cat] || SABER_FALLBACK[(i||0)%SABER_FALLBACK.length]; }
