@@ -176,6 +176,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .hl-fact-note{font-size:11px;color:var(--mut);}
 
 .hl-tx{display:flex;flex-direction:column;}
+.hl-tx-scroll{max-height:520px;overflow-y:auto;overflow-x:hidden;margin-right:-6px;padding-right:6px;}
+.hl-tx-scroll::-webkit-scrollbar{width:8px;}
+.hl-tx-scroll::-webkit-scrollbar-thumb{background:rgba(120,150,210,.3);border-radius:99px;}
+.hl-tx-scroll::-webkit-scrollbar-track{background:transparent;}
+.hl-tx-scroll{scrollbar-width:thin;scrollbar-color:rgba(120,150,210,.3) transparent;}
 .hl-txrow{display:grid;grid-template-columns:44px 12px 1fr auto auto auto;align-items:center;gap:8px;padding:10px 4px;border-bottom:1px solid rgba(255,255,255,.05);}
 .hl-txrow:hover{background:rgba(255,255,255,.02);border-radius:8px;}
 .hl-txrow:last-child{border-bottom:0;}
@@ -670,14 +675,14 @@ function render(){
     +'</section>'
     +'<div class="hl-grid"><div class="hl-col">'+leftCol+caixaPanel(c)
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Por banco</h2><p>visão de apoio</p></div></div>'+banksHtml+'</section>'
-      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Por forma de pagamento</h2><p>PIX, cartão, etc.</p></div></div>'+formasHtml+'</section></div>'
+      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Por forma de pagamento</h2><p>PIX, cartão, etc.</p></div></div>'+formasHtml+'</section>'
+      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Mapa de tipos</h2><p>distribuição de gastos</p></div></div>'+donut+'</section>'
+      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Linha do tempo</h2><p>entrou x saiu por semana</p></div></div>'+weeksHtml+'</section></div>'
       +'<div class="hl-col wide">'
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Patrimônio por responsável</h2><p>fluxo (resultado do mês) x estoque (acumulado) em '+ymLabel(state.month)+'</p></div></div>'+quadroHtml+'</section>'
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Evolução do patrimônio</h2><p>quanto existia no fechamento de cada mês'+(isAmbos?" (Galáxia)":"")+'</p></div></div>'+evoHtml+'</section>'
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Os mais procurados</h2><p>onde a Força mais escapou neste ciclo</p></div></div>'+sabers+'</section>'
-        +'<div class="hl-row2"><section class="hl-panel"><div class="hl-panel-head"><div><h2>Mapa de tipos</h2><p>distribuição de gastos</p></div></div>'+donut+'</section>'
-        +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Linha do tempo</h2><p>entrou x saiu por semana</p></div></div>'+weeksHtml+'</section></div>'
-        +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Registro de bordo</h2><p>movimentos de '+ymLabel(state.month)+'</p></div></div>'+txHtml+'</section>'
+        +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Registro de bordo</h2><p>movimentos de '+ymLabel(state.month)+'</p></div></div><div class="hl-tx-scroll">'+txHtml+'</div></section>'
       +'</div></div>'
     +'<footer class="hl-foot">'+(useSupabase?'<span class="on">● Supabase conectado</span> · dados na nuvem':'<span class="off">● Modo local</span> · salvando neste navegador')+'</footer>';
 }
