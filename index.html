@@ -123,8 +123,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .hl-donut-lbl{fill:var(--mut);font-size:8px;font-family:Inter;text-transform:uppercase;letter-spacing:.1em;}
 .hl-legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;flex:1;min-width:140px;}
 .hl-legend li{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink);}
-.hl-legend li span{width:9px;height:9px;border-radius:2px;box-shadow:0 0 6px currentColor;}
-.hl-legend li b{margin-left:auto;font-family:Orbitron;font-size:11px;color:var(--mut);font-weight:600;}
+.hl-legend li .dot{flex:0 0 9px;width:9px;height:9px;border-radius:2px;box-shadow:0 0 6px currentColor;}
+.hl-legend li .lbl{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.25;}
+.hl-legend li b{flex:0 0 auto;margin-left:8px;font-family:Orbitron;font-size:11px;color:var(--mut);font-weight:600;}
 
 .hl-wlegend{display:flex;gap:14px;font-size:11px;color:var(--mut);margin-bottom:12px;}
 .hl-wlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle;}
@@ -474,7 +475,7 @@ function donutSVG(ranking,total){
   var circles=segs.map(function(s){
     return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+s.color+'" stroke-width="14" stroke-dasharray="'+s.dash+' '+(circ-s.dash)+'" stroke-dashoffset="'+s.offset+'" transform="rotate(-90 '+cx+' '+cy+')" style="filter:drop-shadow(0 0 4px '+s.color+')"></circle>';
   }).join("");
-  var legend=segs.slice(0,7).map(function(s){return '<li><span style="background:'+s.color+'"></span>'+esc(s.cat)+'<b>'+pct(s.val/total*100)+'</b></li>';}).join("");
+  var legend=segs.slice(0,7).map(function(s){return '<li><span class="dot" style="background:'+s.color+'"></span><span class="lbl">'+esc(s.cat)+'</span><b>'+pct(s.val/total*100)+'</b></li>';}).join("");
   return '<div class="hl-donut"><svg viewBox="0 0 140 140"><circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"></circle>'
     +circles+'<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" class="hl-donut-top">'+pct(top.val/total*100)+'</text>'
     +'<text x="'+cx+'" y="'+(cy+12)+'" text-anchor="middle" class="hl-donut-lbl">'+esc(top.cat)+'</text></svg><ul class="hl-legend">'+legend+'</ul></div>';
