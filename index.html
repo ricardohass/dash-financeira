@@ -58,7 +58,7 @@ select,input{font-family:Inter;}
 .hl-hud-extra{display:block;margin-top:6px;font-size:11px;font-weight:600;}
 .hl-hud-extra.good{color:#7fe6a0;}.hl-hud-extra.bad{color:#ff9aa4;}
 
-.hl-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start;}
+.hl-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:stretch;}
 .hl-col{display:flex;flex-direction:column;gap:16px;}
 .hl-col.wide{min-width:0;}
 .hl-row2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
@@ -177,7 +177,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .hl-fact-note{font-size:11px;color:var(--mut);}
 
 .hl-tx{display:flex;flex-direction:column;}
-.hl-tx-scroll{max-height:520px;overflow-y:auto;overflow-x:hidden;margin-right:-6px;padding-right:6px;}
+.hl-panel-fill{display:flex;flex-direction:column;flex:1 1 0;min-height:0;}
+.hl-tx-scroll{flex:1 1 0;min-height:220px;overflow-y:auto;overflow-x:hidden;margin-right:-6px;padding-right:6px;}
 .hl-tx-scroll::-webkit-scrollbar{width:8px;}
 .hl-tx-scroll::-webkit-scrollbar-thumb{background:rgba(120,150,210,.3);border-radius:99px;}
 .hl-tx-scroll::-webkit-scrollbar-track{background:transparent;}
@@ -683,7 +684,7 @@ function render(){
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Patrimônio por responsável</h2><p>fluxo (resultado do mês) x estoque (acumulado) em '+ymLabel(state.month)+'</p></div></div>'+quadroHtml+'</section>'
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Evolução do patrimônio</h2><p>quanto existia no fechamento de cada mês'+(isAmbos?" (Galáxia)":"")+'</p></div></div>'+evoHtml+'</section>'
         +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Os mais procurados</h2><p>onde a Força mais escapou neste ciclo</p></div></div>'+sabers+'</section>'
-        +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Registro de bordo</h2><p>movimentos de '+ymLabel(state.month)+'</p></div></div><div class="hl-tx-scroll">'+txHtml+'</div></section>'
+        +'<section class="hl-panel hl-panel-fill"><div class="hl-panel-head"><div><h2>Registro de bordo</h2><p>movimentos de '+ymLabel(state.month)+'</p></div></div><div class="hl-tx-scroll">'+txHtml+'</div></section>'
       +'</div></div>'
     +'<footer class="hl-foot">'+(useSupabase?'<span class="on">● Supabase conectado</span> · dados na nuvem':'<span class="off">● Modo local</span> · salvando neste navegador')+'</footer>';
 }
