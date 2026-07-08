@@ -85,6 +85,22 @@ select,input{font-family:Inter;}
 input[type=number]{-moz-appearance:textfield;appearance:textfield;}
 input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 
+/* recorrencia */
+.hl-rec{display:flex;flex-direction:column;gap:11px;border:1px dashed var(--line);border-radius:11px;padding:12px;background:rgba(255,255,255,.015);}
+.hl-rec-title{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--mut);font-weight:600;}
+.hl-rec-title b{color:#cfe0ff;font-weight:600;}
+.hl-rec .hl-switch{width:100%;}
+.hl-rec .hl-switch button{flex:1;}
+.hl-rec-freq{font-size:12px;color:var(--mut);background:var(--void);border:1px solid var(--line);border-radius:9px;padding:9px 12px;}
+.hl-rec-freq b{color:var(--ink);font-weight:600;}
+.hl-rec-dates{display:flex;gap:8px;}
+.hl-rec-dates select{flex:1;background:var(--void);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:15px;outline:none;cursor:pointer;}
+.hl-rec-dates select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,216,77,.12);}
+.hl-rec-preview{font-size:12px;color:#9be8b4;line-height:1.5;padding:2px 2px 0;}
+.hl-rec-preview.warn{color:#ffb648;}
+.hl-rec-hint{font-size:12px;color:var(--mut);line-height:1.5;background:rgba(94,200,255,.06);border:1px solid rgba(94,200,255,.2);border-radius:9px;padding:9px 11px;}
+.hl-rec-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.06em;padding:1px 6px;border-radius:99px;background:rgba(94,200,255,.15);color:#5ec8ff;border:1px solid rgba(94,200,255,.3);vertical-align:middle;margin-left:6px;}
+
 .hl-submit{margin-top:4px;border:0;border-radius:10px;padding:11px;font-family:Orbitron;font-size:12px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
   background:linear-gradient(180deg,#ff5563,#d61f2d);color:#fff;box-shadow:0 8px 20px -10px #ff3b4a;transition:.15s;}
 .hl-submit.income{background:linear-gradient(180deg,#56e784,#16a34a);box-shadow:0 8px 20px -10px #43e06a;}
@@ -256,6 +272,54 @@ function ymNow(){ return new Date().toISOString().slice(0,7); }
 function prevYM(ym){ var a=ym.split("-").map(Number); var d=new Date(a[0],a[1]-2,1); return d.toISOString().slice(0,7); }
 function ymLabel(ym){ var a=ym.split("-").map(Number); return MESES_AB[a[1]-1]+"/"+a[0]; }
 function weekOfMonth(iso){ return Math.min(5, Math.ceil(Number(iso.slice(8,10))/7)); }
+function ymAdd(ym,k){ var a=ym.split("-").map(Number); var d=new Date(a[0],a[1]-1+k,1); return d.toISOString().slice(0,7); }
+function monthsBetween(a,b){ var pa=a.split("-").map(Number),pb=b.split("-").map(Number); return (pb[0]-pa[0])*12+(pb[1]-pa[1])+1; }
+
+/* ---------- recorrencia: 1 registro se projeta em cada mes ---------- */
+// o registro recorrente comeca no mes de rec.date e repete todo mes ate rec.recorrFim (YYYY-MM) ou pra sempre se null
+function activeInMonth(rec,ym){
+  var s=(rec.date||"").slice(0,7);
+  if(!rec.recorrente) return s===ym;
+  if(!s||ym<s) return false;
+  if(rec.recorrFim && ym>rec.recorrFim) return false;
+  return true;
+}
+// ocorrencias (expandidas) ativas exatamente no mes ym
+function occThisMonth(arr,ym){
+  var out=[];
+  (arr||[]).forEach(function(e){
+    if(!activeInMonth(e,ym)) return;
+    if(e.recorrente){
+      var o=Object.assign({},e);
+      var day=(e.date||"").slice(8,10)||"01"; if(Number(day)>28) day="28";
+      o.date=ym+"-"+day; o._series=e.id; o._rec=true;
+      var s=(e.date||"").slice(0,7);
+      o._parc = e.recorrFim ? (monthsBetween(s,ym)+"/"+monthsBetween(s,e.recorrFim)) : "↻";
+      out.push(o);
+    } else out.push(e);
+  });
+  return out;
+}
+function sumMonth(arr,ym){ return occThisMonth(arr,ym).reduce(function(s,e){return s+Number(e.amount||0);},0); }
+// soma acumulada de tudo que ja ocorreu ate (e incluindo) o mes m
+function sumUpTo(arr,m){
+  var s=0;
+  (arr||[]).forEach(function(e){
+    var startYM=(e.date||"").slice(0,7); if(!startYM||m<startYM) return;
+    if(!e.recorrente){ s+=Number(e.amount||0); return; }
+    var end=(e.recorrFim && e.recorrFim<m)?e.recorrFim:m;
+    var n=monthsBetween(startYM,end); if(n>0) s+=n*Number(e.amount||0);
+  });
+  return s;
+}
+// meses ativos de um registro ate um teto (cap), pra montar a evolucao
+function recMonths(rec,cap){
+  var out=[],s=(rec.date||"").slice(0,7); if(!s) return out;
+  if(!rec.recorrente){ if(s<=cap) out.push(s); return out; }
+  var end=rec.recorrFim?(rec.recorrFim<cap?rec.recorrFim:cap):cap, y=s;
+  while(y<=end){ out.push(y); y=ymAdd(y,1); if(out.length>600) break; }
+  return out;
+}
 
 var SABER = {
   "Aluguel":"#ff3b4a","Contas de casa":"#a855f7","Mercado":"#43e06a","Transporte":"#2ea6ff",
@@ -302,14 +366,15 @@ function lsLoad(){
 function lsSave(p){ try{ localStorage.setItem("holocron:"+p, JSON.stringify(state.data[p])); }catch(e){} }
 
 function rowToApp(r){
-  if(r.tipo==="entrada") return { id:r.id, date:r.data, client:r.cliente, amount:Number(r.valor), note:r.nota||"" };
-  return { id:r.id, date:r.data, category:r.categoria, bank:r.banco, forma:r.forma, amount:Number(r.valor), note:r.nota||"" };
+  if(r.tipo==="entrada") return { id:r.id, date:r.data, client:r.cliente, amount:Number(r.valor), note:r.nota||"", recorrente:!!r.recorrente, recorrFim:r.recorr_fim||null };
+  return { id:r.id, date:r.data, category:r.categoria, bank:r.banco, forma:r.forma, amount:Number(r.valor), note:r.nota||"", recorrente:!!r.recorrente, recorrFim:r.recorr_fim||null };
 }
 function appToRow(perfil, kind, rec){
   return { perfil:perfil, tipo: kind==="expense"?"gasto":"entrada", data:rec.date, valor:rec.amount,
     categoria: kind==="expense"?(rec.category||null):null, banco: kind==="expense"?(rec.bank||null):null,
     forma: kind==="expense"?(rec.forma||null):null,
-    cliente: kind==="income"?(rec.client||null):null, nota:rec.note||null };
+    cliente: kind==="income"?(rec.client||null):null, nota:rec.note||null,
+    recorrente: !!rec.recorrente, recorr_fim: (rec.recorrFim||null) };
 }
 
 async function dataLoad(){
@@ -380,18 +445,18 @@ function taggedSet(){
 }
 function compute(){
   var m=state.month, set=taggedSet();
-  var mExp=set.expenses.filter(function(e){return (e.date||"").slice(0,7)===m;});
-  var mInc=set.income.filter(function(e){return (e.date||"").slice(0,7)===m;});
+  var mExp=occThisMonth(set.expenses,m);
+  var mInc=occThisMonth(set.income,m);
   var totalExp=mExp.reduce(function(s,e){return s+Number(e.amount||0);},0);
   var totalInc=mInc.reduce(function(s,e){return s+Number(e.amount||0);},0);
   var balance=totalInc-totalExp, savings=totalInc>0?balance/totalInc*100:0;
   // ESTOQUE (patrimonio): saldo inicial manual + soma dos resultados ate o mes selecionado
   var saldoInicial=Number(set.caixa||0);
-  var incAcum=set.income.filter(function(e){return (e.date||"").slice(0,7)<=m;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
-  var expAcum=set.expenses.filter(function(e){return (e.date||"").slice(0,7)<=m;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var incAcum=sumUpTo(set.income,m);
+  var expAcum=sumUpTo(set.expenses,m);
   var saldoAcumulado=saldoInicial+incAcum-expAcum;
   var pm=prevYM(m);
-  var prevExp=set.expenses.filter(function(e){return (e.date||"").slice(0,7)===pm;}).reduce(function(s,e){return s+Number(e.amount||0);},0);
+  var prevExp=sumMonth(set.expenses,pm);
   var deltaExp=prevExp>0?(totalExp-prevExp)/prevExp*100:null;
   var rmap={}; mExp.forEach(function(e){var c=e.category||"Outros"; rmap[c]=(rmap[c]||0)+Number(e.amount||0);});
   var ranking=Object.keys(rmap).map(function(c){return {cat:c,val:rmap[c]};}).sort(function(a,b){return b.val-a.val;});
@@ -415,10 +480,9 @@ function compute(){
 
 /* ---------- fluxo (mes) x estoque (acumulado) por conjunto de dados ---------- */
 function fluxoEstoque(d, m){
-  function sum(arr,pred){ return arr.filter(pred).reduce(function(s,e){return s+Number(e.amount||0);},0); }
   var inc=d.income||[], exp=d.expenses||[];
-  var resMes = sum(inc,function(e){return (e.date||"").slice(0,7)===m;}) - sum(exp,function(e){return (e.date||"").slice(0,7)===m;});
-  var acum = Number(d.caixa||0) + sum(inc,function(e){return (e.date||"").slice(0,7)<=m;}) - sum(exp,function(e){return (e.date||"").slice(0,7)<=m;});
+  var resMes = sumMonth(inc,m) - sumMonth(exp,m);
+  var acum = Number(d.caixa||0) + sumUpTo(inc,m) - sumUpTo(exp,m);
   return { res:resMes, acum:acum, inicial:Number(d.caixa||0) };
 }
 // quadro por responsavel + consolidado, no mes selecionado
@@ -432,15 +496,19 @@ function quadroPatrimonio(m){
 }
 // evolucao mes a mes (resultado e acumulado ao fim de cada mes) do conjunto selecionado
 function evolucao(set){
-  function sum(arr,pred){ return arr.filter(pred).reduce(function(s,e){return s+Number(e.amount||0);},0); }
+  // teto: mostra recorrencias sem fim ate o mes que voce esta olhando (ou o ultimo lancamento real)
+  var cap=state.month;
+  function bump(ym){ if(ym && ym>cap) cap=ym; }
+  (set.income||[]).forEach(function(e){ bump((e.date||"").slice(0,7)); });
+  (set.expenses||[]).forEach(function(e){ bump((e.date||"").slice(0,7)); bump(e.recorrFim); });
   var mset={};
-  (set.income||[]).forEach(function(e){var ym=(e.date||"").slice(0,7); if(ym) mset[ym]=true;});
-  (set.expenses||[]).forEach(function(e){var ym=(e.date||"").slice(0,7); if(ym) mset[ym]=true;});
+  (set.income||[]).forEach(function(e){ recMonths(e,cap).forEach(function(m){mset[m]=true;}); });
+  (set.expenses||[]).forEach(function(e){ recMonths(e,cap).forEach(function(m){mset[m]=true;}); });
   var months=Object.keys(mset).sort();
   var acum=Number(set.caixa||0);
   return months.map(function(ym){
-    var inc=sum(set.income,function(e){return (e.date||"").slice(0,7)===ym;});
-    var exp=sum(set.expenses,function(e){return (e.date||"").slice(0,7)===ym;});
+    var inc=sumMonth(set.income,ym);
+    var exp=sumMonth(set.expenses,ym);
     var res=inc-exp; acum+=res;
     return {ym:ym, inc:inc, exp:exp, res:res, acum:acum};
   });
@@ -449,6 +517,7 @@ function evolucao(set){
 /* ---------- selects de data (PT) ---------- */
 function monthOpts(sel){ var o=""; for(var i=1;i<=12;i++){o+='<option value="'+i+'"'+(i===sel?' selected':'')+'>'+MESES[i-1]+'</option>';} return o; }
 function yearOpts(sel){ var y=new Date().getFullYear(),o=""; for(var i=y-2;i<=y+1;i++){o+='<option value="'+i+'"'+(i===sel?' selected':'')+'>'+i+'</option>';} return o; }
+function recYearOpts(sel){ var y=new Date().getFullYear(),o=""; for(var i=y;i<=y+8;i++){o+='<option value="'+i+'"'+(i===sel?' selected':'')+'>'+i+'</option>';} return o; }
 function isoToBR(iso){ if(!iso) return ""; var a=iso.split("-"); return a[2]+"/"+a[1]+"/"+a[0]; }
 function brToIso(br){ var m=String(br||"").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if(!m) return null; var d=+m[1],mo=+m[2],y=+m[3]; if(mo<1||mo>12||d<1||d>31) return null; return y+"-"+String(mo).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
 function defaultDateBR(){ var t=new Date(); return String(Math.min(28,t.getDate())).padStart(2,"0")+"/"+state.month.slice(5,7)+"/"+state.month.slice(0,4); }
@@ -500,6 +569,34 @@ function formaSelect(value){
   return '<select id="ex-forma">'+list.map(function(f){ return '<option value="'+esc(f)+'"'+(f===sel?' selected':'')+'>'+esc(f)+'</option>'; }).join("")+'</select>';
 }
 
+function recurrenceBlock(ed, exemplos){
+  var recOn = !!(ed && ed.recorrente);
+  var hasFim = !!(ed && ed.recorrFim);
+  var durAte = recOn ? hasFim : true;                 // padrao: com data final
+  var startYM = (ed && ed.date) ? ed.date.slice(0,7) : state.month;
+  var fimYM = (ed && ed.recorrFim) ? ed.recorrFim : ymAdd(startYM, 5); // padrao: 6 parcelas
+  var fimM = Number(fimYM.slice(5,7)), fimY = Number(fimYM.slice(0,4));
+  return '<div class="hl-rec">'
+    +'<div class="hl-rec-title">↻ Recorrência <b>·</b> '+(exemplos||"parcela, assinatura, academia…")+'</div>'
+    +'<div class="hl-switch hl-rec-kind">'
+      +'<button type="button" data-act="rec-kind" data-v="unico" class="'+(recOn?"":"on")+'">Único</button>'
+      +'<button type="button" data-act="rec-kind" data-v="rec" class="'+(recOn?"on":"")+'">Recorrente</button>'
+    +'</div>'
+    +'<div id="rec-details" style="display:'+(recOn?"":"none")+';flex-direction:column;gap:11px;">'
+      +'<div class="hl-rec-freq">Repete <b>todo mês</b>, sempre no mesmo dia do primeiro pagamento.</div>'
+      +'<div class="hl-switch hl-rec-dur">'
+        +'<button type="button" data-act="rec-dur" data-v="ate" class="'+(durAte?"on":"")+'">Com data final</button>'
+        +'<button type="button" data-act="rec-dur" data-v="sem" class="'+(durAte?"":"on")+'">Sem data final</button>'
+      +'</div>'
+      +'<div id="rec-ate" style="display:'+(durAte?"":"none")+';flex-direction:column;gap:8px;">'
+        +'<span style="font-size:11px;color:var(--mut);font-weight:600;">Repetir até (mês/ano do último pagamento)</span>'
+        +'<div class="hl-rec-dates"><select id="rec-mes">'+monthOpts(fimM)+'</select><select id="rec-ano">'+recYearOpts(fimY)+'</select></div>'
+        +'<div id="rec-preview" class="hl-rec-preview"></div>'
+      +'</div>'
+      +'<div id="rec-sem" class="hl-rec-hint" style="display:'+(durAte?"none":"block")+';">↻ Continua todo mês, sem fim, até você editar ou remover. Aparece automaticamente em cada mês que você abrir.</div>'
+    +'</div>'
+  +'</div>';
+}
 function expenseForm(){
   var ed=state.editing&&state.editing.kind==="expense"?state.editing:null;
   return '<div class="hl-form">'
@@ -509,6 +606,7 @@ function expenseForm(){
     +'<label class="hl-field"><span>Banco</span>'+bankSelect(ed?ed.bank:"")+'</label>'
     +'<label class="hl-field"><span>Forma de pagamento</span>'+formaSelect(ed?ed.forma:"")+'</label>'
     +'<label class="hl-field"><span>Nota (opcional)</span><input id="ex-note" placeholder="ex: feira da semana" value="'+(ed?esc(ed.note||""):"")+'"></label>'
+    +recurrenceBlock(ed)
     +(ed
       ? '<button class="hl-submit editing" data-act="save-expense">Salvar alteração</button><button class="hl-cancel" data-act="cancel-edit">Cancelar</button>'
       : '<button class="hl-submit" data-act="add-expense">Registrar gasto</button>')
@@ -521,6 +619,7 @@ function incomeForm(){
     +'<label class="hl-field"><span>Valor (R$)</span><input type="number" inputmode="decimal" id="in-amount" placeholder="0,00" value="'+(ed?ed.amount:"")+'"></label>'
     +'<label class="hl-field"><span>Cliente</span><input id="in-client" placeholder="ex: Dra. Vivian, FX..." value="'+(ed?esc(ed.client||""):"")+'"></label>'
     +'<label class="hl-field"><span>Nota (opcional)</span><input id="in-note" placeholder="ex: parcela 1/3" value="'+(ed?esc(ed.note||""):"")+'"></label>'
+    +recurrenceBlock(ed, "salário, aluguel recebido, mensalidade…")
     +(ed
       ? '<button class="hl-submit editing" data-act="save-income">Salvar alteração</button><button class="hl-cancel" data-act="cancel-edit">Cancelar</button>'
       : '<button class="hl-submit income" data-act="add-income">Registrar entrada</button>')
@@ -620,10 +719,12 @@ function render(){
   var txHtml=c.tx.length===0?emptyBox("Nada registrado neste ciclo ainda.")
     :'<div class="hl-tx">'+c.tx.map(function(t){
       var title=t.kind==="income"?(t.client||"Entrada"):t.category;
-      var sub=t.kind==="income"?(t.note||"recompensa"):[t.note,t.bank,t.forma].filter(Boolean).join(" · ");
+      var recTag=t._parc ? (t._parc==="↻"?"↻ mensal":"parcela "+t._parc) : null;
+      var sub=t.kind==="income"?([recTag,t.note].filter(Boolean).join(" · ")||"recompensa"):[recTag,t.note,t.bank,t.forma].filter(Boolean).join(" · ");
       var dot=t.kind==="income"?"#43e06a":colorFor(t.category,0);
+      var badge=t._rec?'<span class="hl-rec-badge">'+(t._parc&&t._parc!=="↻"?t._parc:"↻")+'</span>':'';
       return '<div class="hl-txrow '+t.kind+'"><span class="hl-tx-date">'+t.date.slice(8,10)+'/'+t.date.slice(5,7)+'</span><span class="hl-tx-dot" style="background:'+dot+'"></span>'
-        +'<span class="hl-tx-main"><b>'+esc(title)+'</b><small>'+esc(sub)+'</small></span><span class="hl-tx-val '+t.kind+'">'+(t.kind==="income"?"+":"\u2212")+' '+money(t.amount)+'</span>'
+        +'<span class="hl-tx-main"><b>'+esc(title)+badge+'</b><small>'+esc(sub)+'</small></span><span class="hl-tx-val '+t.kind+'">'+(t.kind==="income"?"+":"\u2212")+' '+money(t.amount)+'</span>'
         +'<button class="hl-tx-act" data-act="edit" data-id="'+t.id+'" data-kind="'+t.kind+'" data-p="'+t._p+'" title="Editar">&#9998;</button>'
         +'<button class="hl-tx-act del" data-act="del" data-id="'+t.id+'" data-kind="'+t.kind+'" data-p="'+t._p+'" title="Remover">&times;</button></div>';}).join("")+'</div>';
 
@@ -690,19 +791,53 @@ function render(){
 }
 
 /* ---------- leitura de formularios ---------- */
+function readRec(){
+  var kindBtn=document.querySelector(".hl-rec-kind button.on");
+  if(!kindBtn || kindBtn.getAttribute("data-v")!=="rec") return { recorrente:false, recorrFim:null };
+  var durBtn=document.querySelector(".hl-rec-dur button.on");
+  var dur=durBtn?durBtn.getAttribute("data-v"):"ate";
+  if(dur==="sem") return { recorrente:true, recorrFim:null };
+  var mes=document.getElementById("rec-mes").value, ano=document.getElementById("rec-ano").value;
+  return { recorrente:true, recorrFim: ano+"-"+String(mes).padStart(2,"0") };
+}
+function recPrefix(){ return document.getElementById("ex-date")?"ex":"in"; }
+function updateRecPreview(){
+  var el=document.getElementById("rec-preview"); if(!el) return;
+  var kindBtn=document.querySelector(".hl-rec-kind button.on");
+  var durBtn=document.querySelector(".hl-rec-dur button.on");
+  if(!kindBtn||kindBtn.getAttribute("data-v")!=="rec"||!durBtn||durBtn.getAttribute("data-v")!=="ate"){ el.textContent=""; return; }
+  var px=recPrefix();
+  var iso=readDate(px), amt=Number((document.getElementById(px+"-amount")||{}).value)||0;
+  var mes=document.getElementById("rec-mes").value, ano=document.getElementById("rec-ano").value;
+  var fim=ano+"-"+String(mes).padStart(2,"0");
+  if(!iso){ el.textContent="Preencha a data do pagamento pra ver a projeção."; el.className="hl-rec-preview"; return; }
+  var s=iso.slice(0,7);
+  if(fim<s){ el.textContent="⚠ a data final está antes do primeiro pagamento"; el.className="hl-rec-preview warn"; return; }
+  var n=monthsBetween(s,fim);
+  el.className="hl-rec-preview";
+  el.textContent="= "+n+"x de "+money(amt)+" · "+ymLabel(s)+" → "+ymLabel(fim)+" · total "+money(n*amt);
+}
 function readExpense(){
   var amount=Number(document.getElementById("ex-amount").value);
   if(!(amount>0)){ alert("Informe um valor maior que zero."); return null; }
   var date=readDate("ex");
   if(!date){ alert("Data inválida. Use o formato dd/mm/aaaa."); return null; }
-  return { date:date, category:document.getElementById("ex-cat").value, bank:document.getElementById("ex-bank").value.trim(), forma:document.getElementById("ex-forma").value, amount:amount, note:document.getElementById("ex-note").value.trim() };
+  var rec=readRec();
+  if(rec.recorrente && rec.recorrFim && rec.recorrFim < date.slice(0,7)){
+    alert("A data final da recorrência precisa ser no mesmo mês ou depois do primeiro pagamento."); return null;
+  }
+  return { date:date, category:document.getElementById("ex-cat").value, bank:document.getElementById("ex-bank").value.trim(), forma:document.getElementById("ex-forma").value, amount:amount, note:document.getElementById("ex-note").value.trim(), recorrente:rec.recorrente, recorrFim:rec.recorrFim };
 }
 function readIncome(){
   var amount=Number(document.getElementById("in-amount").value);
   if(!(amount>0)){ alert("Informe um valor maior que zero."); return null; }
   var date=readDate("in");
   if(!date){ alert("Data inválida. Use o formato dd/mm/aaaa."); return null; }
-  return { date:date, client:(document.getElementById("in-client").value||"Cliente").trim(), amount:amount, note:document.getElementById("in-note").value.trim() };
+  var rec=readRec();
+  if(rec.recorrente && rec.recorrFim && rec.recorrFim < date.slice(0,7)){
+    alert("A data final da recorrência precisa ser no mesmo mês ou depois da primeira entrada."); return null;
+  }
+  return { date:date, client:(document.getElementById("in-client").value||"Cliente").trim(), amount:amount, note:document.getElementById("in-note").value.trim(), recorrente:rec.recorrente, recorrFim:rec.recorrFim };
 }
 function startEdit(rec){
   state.profile=rec._p;       // se estava em "ambos", vai pro dono
@@ -726,6 +861,21 @@ app.addEventListener("click", async function(ev){
   if(act==="mode"){ state.mode=id; render(); return; }
   if(act==="cancel-edit"){ cancelEdit(); return; }
 
+  if(act==="rec-kind"){
+    var rk=btn.getAttribute("data-v");
+    document.querySelectorAll(".hl-rec-kind button").forEach(function(b){ b.classList.toggle("on", b===btn); });
+    var det=document.getElementById("rec-details"); if(det) det.style.display = rk==="rec"?"flex":"none";
+    updateRecPreview(); return;
+  }
+  if(act==="rec-dur"){
+    var rd=btn.getAttribute("data-v");
+    document.querySelectorAll(".hl-rec-dur button").forEach(function(b){ b.classList.toggle("on", b===btn); });
+    var ate=document.getElementById("rec-ate"), sem=document.getElementById("rec-sem");
+    if(ate) ate.style.display = rd==="ate"?"flex":"none";
+    if(sem) sem.style.display = rd==="sem"?"block":"none";
+    updateRecPreview(); return;
+  }
+
   if(act==="add-expense"){ var r=readExpense(); if(!r) return; await addRecord(state.profile,"expense",r); render(); return; }
   if(act==="add-income"){ var ri=readIncome(); if(!ri) return; await addRecord(state.profile,"income",ri); render(); return; }
   if(act==="save-expense"){ var re=readExpense(); if(!re) return; re.id=state.editing.id; await updateRecord(state.profile,"expense",re); cancelEdit(); return; }
@@ -740,7 +890,10 @@ app.addEventListener("click", async function(ev){
   }
   if(act==="del"){
     var k=btn.getAttribute("data-kind"), pp=btn.getAttribute("data-p");
-    if(!confirm("Remover este registro?")) return;
+    var delArr=state.data[pp][k==="expense"?"expenses":"income"];
+    var delRec=delArr.filter(function(x){return x.id===id;})[0];
+    var delMsg=(delRec&&delRec.recorrente)?"Remover esta despesa recorrente? Ela some de TODOS os meses.":"Remover este registro?";
+    if(!confirm(delMsg)) return;
     await deleteRecord(pp,k,id); render(); return;
   }
   if(act==="seed"){ await loadSeed(); return; }
@@ -761,12 +914,14 @@ app.addEventListener("input", function(ev){
     else if(v.length>2) out=v.slice(0,2)+"/"+v.slice(2);
     ev.target.value=out;
   }
+  if(ev.target.id==="ex-date"||ev.target.id==="ex-amount"||ev.target.id==="in-date"||ev.target.id==="in-amount") updateRecPreview();
 });
 app.addEventListener("change", function(ev){
   if(ev.target.id==="ciclo-mes"||ev.target.id==="ciclo-ano"){
     var m=document.getElementById("ciclo-mes").value, y=document.getElementById("ciclo-ano").value;
     state.month=y+"-"+String(m).padStart(2,"0"); state.editing=null; render();
   }
+  if(ev.target.id==="rec-mes"||ev.target.id==="rec-ano") updateRecPreview();
 });
 app.addEventListener("keydown", function(ev){
   if(ev.key==="Enter" && (ev.target.id==="login-user"||ev.target.id==="login-pass")){ doLogin(); return; }
