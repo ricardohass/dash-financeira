@@ -792,7 +792,32 @@ function render(){
         +'<section class="hl-panel hl-panel-fill"><div class="hl-panel-head"><div><h2>Registro de bordo</h2><p>movimentos de '+ymLabel(state.month)+'</p></div></div><div class="hl-tx-scroll">'+txHtml+'</div></section>'
       +'</div></div>'
     +'<footer class="hl-foot">'+(useSupabase?'<span class="on">● Supabase conectado</span> · dados na nuvem':'<span class="off">● Modo local</span> · salvando neste navegador')+'</footer>';
+  alignLog();
+  requestAnimationFrame(alignLog);
 }
+
+/* Alinha o fundo do "Registro de bordo" exatamente com o fundo da coluna
+   esquerda: mede a altura da esquerda e limita o scroll do registro para
+   que a coluna direita nunca ultrapasse nem fique aquem dessa linha.
+   Recalculado a cada render e a cada resize. */
+function alignLog(){
+  var grid=document.querySelector(".hl-grid");
+  if(!grid || grid.children.length<2) return;
+  var left=grid.children[0], wide=grid.children[1];
+  var scroll=wide.querySelector(".hl-tx-scroll");
+  if(!scroll) return;
+  // empilhado (mobile): sem limite, deixa fluir
+  if(Math.abs(left.offsetTop-wide.offsetTop)>1){ scroll.style.maxHeight=""; return; }
+  scroll.style.maxHeight="none";
+  var wideOther=wide.offsetHeight-scroll.offsetHeight; // tudo na direita menos o scroll
+  var avail=left.offsetHeight-wideOther;
+  scroll.style.maxHeight=Math.max(140,avail)+"px";
+}
+var _alignRAF;
+window.addEventListener("resize", function(){
+  cancelAnimationFrame(_alignRAF);
+  _alignRAF=requestAnimationFrame(alignLog);
+});
 
 /* ---------- leitura de formularios ---------- */
 function readRec(){
