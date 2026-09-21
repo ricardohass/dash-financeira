@@ -521,10 +521,10 @@ function colorFor(cat,i){
 }
 
 /* ---------- perfis ---------- */
-var PROFILE_COLORS = { ricardo:"#2ea6ff", lais:"#ffd84d", casa:"#ff9a3c" };
-var PROFILE_DISPLAY = { ricardo:"Ricardo", lais:"Lais (linda da minha vida)", casa:"Casa" };
-var CASA_KEY = "casa";
-function pessoaKey(p){ var n=norm(p); return n ? n : CASA_KEY; }
+var PROFILE_COLORS = { ricardo:"#2ea6ff", lais:"#ffd84d" };
+var PROFILE_DISPLAY = { ricardo:"Ricardo", lais:"Lais (linda da minha vida)" };
+/* sem Pessoa (ou "Casa") é do casal: conta só na Galáxia, não vira perfil */
+function pessoaKey(p){ var n=norm(p); return n==="casa" ? "" : n; }
 function pessoaColor(key,i){ return PROFILE_COLORS[key] || colorFor(key,i); }
 
 /* ---------- estado ---------- */
@@ -582,14 +582,14 @@ function loadAll(){
         tx[r.ym] = { expenses:r.data.expenses, income:r.data.income };
         hasBank = hasBank || r.data.hasBank;
         hasForma = hasForma || r.data.hasForma;
-        r.data.expenses.concat(r.data.income).forEach(function(t){ people[pessoaKey(t.pessoa)] = true; });
+        r.data.expenses.concat(r.data.income).forEach(function(t){ var k=pessoaKey(t.pessoa); if(k) people[k] = true; });
       });
       state.months = months;
       state.tx = tx;
       state.extra = [].concat.apply([], res[1]);
       state.hasBank = hasBank; state.hasForma = hasForma;
       state.extra.forEach(function(b){ if(b.items.length) people[b.key]=true; });
-      var order = ["ricardo","lais",CASA_KEY];
+      var order = ["ricardo","lais"];
       state.people = Object.keys(people).sort(function(a,b){
         var ia=order.indexOf(a), ib=order.indexOf(b);
         return (ia<0?99:ia)-(ib<0?99:ib) || (a<b?-1:1);
@@ -692,7 +692,7 @@ function compute(){
       return b.amount-a.amount;
     });
 
-  var semPessoa = (d.expenses||[]).concat(d.income||[]).filter(function(t){return !norm(t.pessoa);}).length;
+  var semPessoa = (d.expenses||[]).concat(d.income||[]).filter(function(t){return !pessoaKey(t.pessoa);}).length;
 
   return { mExp:mExp, mInc:mInc, totalExp:totalExp, totalInc:totalInc, balance:balance,
     deltaExp:deltaExp, prevYM:pm, ranking:ranking, banks:banks, formas:formas,
@@ -707,10 +707,12 @@ function quadroPatrimonio(m){
     var res = sumMonthAll(m,"income",k) - sumMonthAll(m,"expenses",k);
     var acum = startingFor(k);
     monthsUpTo(m).forEach(function(x){ acum += sumMonthAll(x.ym,"income",k) - sumMonthAll(x.ym,"expenses",k); });
-    return { id:k, nome:(k===CASA_KEY?"Casa":titleCase(k)), res:res, acum:acum };
+    return { id:k, nome:titleCase(k), res:res, acum:acum };
   });
-  var res=0, acum=0;
-  linhas.forEach(function(l){ res+=l.res; acum+=l.acum; });
+  /* Galáxia soma tudo, inclusive o que está sem Pessoa */
+  var res = sumMonthAll(m,"income",null) - sumMonthAll(m,"expenses",null);
+  var acum = startingFor(null);
+  monthsUpTo(m).forEach(function(x){ acum += sumMonthAll(x.ym,"income",null) - sumMonthAll(x.ym,"expenses",null); });
   linhas.push({ id:"galaxia", nome:"Galáxia", res:res, acum:acum });
   return linhas;
 }
@@ -818,7 +820,7 @@ function render(){
             : "Território Sith. Os gastos passaram das entradas.");
 
   var tabsList = [{id:"galaxia", nome:"Galáxia", cor:"#43e06a"}].concat(state.people.map(function(k,i){
-    return { id:k, nome:(k===CASA_KEY?"Casa":titleCase(k)), cor:pessoaColor(k,i) };
+    return { id:k, nome:titleCase(k), cor:pessoaColor(k,i) };
   }));
   var tabs = tabsList.map(function(p){
     var on = state.profile===p.id;
@@ -889,7 +891,7 @@ function render(){
   var txHtml = c.tx.length===0 ? emptyBox("Nada lançado neste ciclo ainda.")
     : '<div class="hl-tx">'+c.tx.map(function(t){
         var dot = t.kind==="income" ? "#43e06a" : colorFor(t.cat,0);
-        var who = norm(t.pessoa) ? titleCase(t.pessoa) : "Casa";
+        var who = pessoaKey(t.pessoa) ? titleCase(t.pessoa) : "";
         var sub = [who, t.banco, t.forma].filter(Boolean).join(" · ");
         var flag = t.flag===false ? '<span class="hl-tx-flag no">em aberto</span>'
                  : t.flag===true ? '<span class="hl-tx-flag ok">'+(t.kind==="income"?"recebido":"pago")+'</span>' : '';
@@ -910,7 +912,7 @@ function render(){
       +'<span class="hl-qcell"><small>saldo acumulado</small><b>'+money(q.acum)+'</b></span>'
       +'</div>';
   }).join("")+'</div>';
-  if(c.semPessoa) quadroHtml += '<div class="hl-warn">'+c.semPessoa+' lançamento(s) de '+ymLabel(state.month)+' estão sem a coluna <b>Pessoa</b> — entram em <b>Casa</b>.</div>';
+  if(c.semPessoa) quadroHtml += '<div class="hl-warn">'+c.semPessoa+' lançamento(s) de '+ymLabel(state.month)+' estão sem a coluna <b>Pessoa</b> — contam só na <b>Galáxia</b>.</div>';
 
   var evo = evolucao();
   var evoHtml;
