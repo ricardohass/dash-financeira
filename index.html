@@ -619,7 +619,9 @@ function loadAll(){
         var all = r.data.expenses.concat(r.data.income);
         tx[r.ym] = {
           expenses: r.data.expenses.filter(function(t){ return !jaNoExtra(t); }),
-          income: r.data.income.filter(function(t){ return !jaNoExtra(t); }),
+          /* entrada só conta depois de marcada como Sim em Recebido */
+          income: r.data.income.filter(function(t){ return !jaNoExtra(t) && t.flag===true; }),
+          aReceber: r.data.income.filter(function(t){ return !jaNoExtra(t) && t.flag!==true; }),
           antigos: all.filter(jaNoExtra)
         };
         hasBank = hasBank || r.data.hasBank;
@@ -705,12 +707,13 @@ function compute(){
 
   var abertoExp = mExp.filter(function(e){return e.flag===false;}).reduce(function(s,e){return s+e.amount;},0);
   var pagoExp   = mExp.filter(function(e){return e.flag===true;}).reduce(function(s,e){return s+e.amount;},0);
-  var abertoInc = mInc.filter(function(e){return e.flag===false;}).reduce(function(s,e){return s+e.amount;},0);
-  var recebInc  = mInc.filter(function(e){return e.flag===true;}).reduce(function(s,e){return s+e.amount;},0);
-  var semFlag = mExp.concat(mInc).filter(function(e){return e.flag===null;}).length;
+  var aReceber = d.aReceber||[];
+  var abertoInc = aReceber.reduce(function(s,e){return s+e.amount;},0);
+  var recebInc  = totalInc;
+  var semFlag = mExp.filter(function(e){return e.flag===null;}).length;
 
   var tx = mExp.map(function(x){var o=Object.assign({},x);o.kind="expense";return o;})
-    .concat(mInc.map(function(x){var o=Object.assign({},x);o.kind="income";return o;}))
+    .concat(mInc.concat(aReceber).map(function(x){var o=Object.assign({},x);o.kind="income";return o;}))
     .sort(function(a,b){
       var da=a.day||0, db=b.day||0;
       if(da!==db) return db-da;
@@ -873,7 +876,7 @@ function render(){
   /* situação (Pago / Recebido) */
   var pendHtml;
   if(c.abertoExp===0 && c.pagoExp===0 && c.abertoInc===0 && c.recebInc===0){
-    pendHtml = emptyBox("Nada marcado nas colunas <b>Pago</b> / <b>Recebido</b> neste ciclo. Escreva <b>Sim</b> ou <b>Não</b> na planilha e o que falta pagar aparece aqui.");
+    pendHtml = emptyBox("Nada marcado nas colunas <b>Pago</b> / <b>Recebido</b> neste ciclo. Escreva <b>Sim</b> ou <b>Não</b> na planilha e o que falta pagar aparece aqui. Entrada só conta como recebida com <b>Sim</b>.");
   } else {
     var linhas=[
       { val:c.abertoExp, cls:"no", txt:"contas ainda não pagas" },
@@ -885,7 +888,7 @@ function render(){
       return '<div class="hl-pend-row '+l.cls+'"><span><b>'+money(l.val)+'</b><small>'+l.txt+'</small></span></div>';
     }).join("")+'</div>';
   }
-  if(c.semFlag && (c.abertoExp||c.pagoExp||c.abertoInc||c.recebInc)) pendHtml += '<div class="hl-warn">'+c.semFlag+' lançamento(s) sem <b>Sim/Não</b> nas colunas Pago/Recebido — não entram nesta conta.</div>';
+  if(c.semFlag && (c.abertoExp||c.pagoExp||c.abertoInc||c.recebInc)) pendHtml += '<div class="hl-warn">'+c.semFlag+' gasto(s) sem <b>Sim/Não</b> na coluna Pago — não entram nesta conta.</div>';
 
   var donut = c.ranking.length===0 ? emptyBox("Sem gastos para o anel neste ciclo.") : donutSVG(c.ranking, c.totalExp);
 
@@ -909,7 +912,8 @@ function render(){
     : '<div class="hl-tx">'+c.tx.map(function(t){
         var dot = t.kind==="income" ? "#43e06a" : colorFor(t.cat,0);
         var sub = [t.catNome, t.banco, t.forma].filter(Boolean).join(" · ");
-        var flag = t.flag===false ? '<span class="hl-tx-flag no">em aberto</span>'
+        var flag = (t.kind==="income" && t.flag!==true) ? '<span class="hl-tx-flag no">a receber</span>'
+                 : t.flag===false ? '<span class="hl-tx-flag no">em aberto</span>'
                  : t.flag===true ? '<span class="hl-tx-flag ok">'+(t.kind==="income"?"recebido":"pago")+'</span>' : '';
         return '<div class="hl-txrow '+t.kind+'">'
           +'<span class="hl-tx-date">'+(t.day?String(t.day).padStart(2,"0")+"/"+state.month.slice(5,7):"--")+'</span>'
@@ -952,7 +956,8 @@ function render(){
       +'<button class="hl-logout" data-act="logout" title="Sair">Sair</button></div></header>'
     +'<div class="hl-status '+(good?"good":"bad")+'">'+statusLine+'</div>'
     +'<section class="hl-kpis">'
-      +hud("Recompensas","entradas do ciclo",money(c.totalInc),"#43e06a")
+      +hud("Recompensas","recebido no ciclo",money(c.totalInc),"#43e06a",
+           c.abertoInc>0?(money(c.abertoInc)+" a receber"):null,true)
       +hud("Lado sombrio","gastos do ciclo",money(c.totalExp),"#ff3b4a",
            c.deltaExp!=null?((c.deltaExp>=0?"▲":"▼")+" "+pct(Math.abs(c.deltaExp))+" vs "+ymLabel(c.prevYM)):null,
            c.deltaExp!=null&&c.deltaExp<0)
