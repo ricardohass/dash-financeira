@@ -284,6 +284,10 @@ var FALLBACK_SHEETS = [
   { gid:"1629151447", name:"EXTRA" }
 ];
 
+/* dia em que os saldos da aba EXTRA foram conferidos: atualizar junto com a aba.
+   O patrimônio parte desse saldo e soma só o que vem depois. */
+var SALDO_DATA = "2026-11-01";
+
 /* ---------- login ---------- */
 var USERS = { ricardo:"040925", lais:"040925" };
 
@@ -322,6 +326,18 @@ function parseDay(raw){
   m = s.match(/^(\d{1,2})\s*[\/\-.]/);        if(m) return clampDay(Number(m[1]));
   m = s.match(/^(\d{1,2})$/);                 if(m) return clampDay(Number(m[1]));
   m = s.match(/(\d{1,2})/);                   if(m) return clampDay(Number(m[1]));
+  return null;
+}
+/* mesma coluna Dia, em data completa: "08/10/2026" / "15/10" / "5" -> "AAAA-MM-DD" */
+function parseData(raw, ym){
+  var s = String(raw==null?"":raw).trim(), m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return m[0];
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?/);
+  if(m){
+    var y = m[3] ? (m[3].length===2 ? "20"+m[3] : m[3]) : ym.slice(0,4);
+    return y+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
+  }
+  if(/^\d{1,2}$/.test(s)) return ym+"-"+s.padStart(2,"0");
   return null;
 }
 function clampDay(d){ return (d>=1 && d<=31) ? d : null; }
@@ -506,6 +522,7 @@ function readMonthSheet(rows, ym, sheetName){
         catNome: categoria ? categoria.nome : "",
         refYM: refMonthYM(desc, ym),
         day: cols.dia>=0 ? parseDay(line[cols.dia]) : null,
+        data: cols.dia>=0 ? parseData(line[cols.dia], ym) : null,
         flag: cols.flag>=0 ? parseFlag(line[cols.flag]) : null,
         banco: banco,
         forma: forma
@@ -670,6 +687,24 @@ function contasExtra(){
 }
 function saldoInicial(){ return state.extra.reduce(function(s,b){ return s+b.total; },0); }
 function monthsUpTo(ym){ return state.months.filter(function(m){ return m.ym<=ym; }); }
+/* no mês do saldo, gasto sem data já estava na conta; entrada sem data ainda não */
+function depoisDoSaldo(t, kind){
+  var mes = SALDO_DATA.slice(0,7);
+  if(t.ym!==mes) return t.ym>mes;
+  return t.data ? t.data>SALDO_DATA : kind==="income";
+}
+function somaDepoisDoSaldo(ym, kind){
+  return (monthSet(ym)[kind]||[]).filter(function(t){ return depoisDoSaldo(t,kind); })
+    .reduce(function(s,t){ return s+t.amount; },0);
+}
+/* null = mês anterior ao saldo: a planilha não diz quanto havia na conta */
+function patrimonioAte(ym){
+  if(ym<SALDO_DATA.slice(0,7)) return null;
+  var acum = saldoInicial();
+  monthsUpTo(ym).forEach(function(x){ acum += somaDepoisDoSaldo(x.ym,"income") - somaDepoisDoSaldo(x.ym,"expenses"); });
+  return acum;
+}
+function dataBR(iso){ return iso.split("-").reverse().join("/"); }
 
 function compute(){
   var m = state.month;
@@ -685,8 +720,7 @@ function compute(){
   var prevExp = pm ? sumMonth(pm,"expenses") : 0;
   var deltaExp = (pm && prevExp>0 && totalExp>0) ? (totalExp-prevExp)/prevExp*100 : null;
 
-  var acum = saldoInicial();
-  monthsUpTo(m).forEach(function(x){ acum += sumMonth(x.ym,"income") - sumMonth(x.ym,"expenses"); });
+  var acum = patrimonioAte(m);
 
   var rmap={};
   mExp.forEach(function(e){ if(!rmap[e.cat]) rmap[e.cat]={cat:e.cat,label:e.catNome,val:0}; rmap[e.cat].val+=e.amount; });
@@ -761,11 +795,9 @@ function metasHtml(ranking, total){
 
 /* evolução mês a mês */
 function evolucao(){
-  var acum = saldoInicial();
   return state.months.map(function(x){
     var inc = sumMonth(x.ym,"income"), exp = sumMonth(x.ym,"expenses");
-    var res = inc-exp; acum += res;
-    return { ym:x.ym, inc:inc, exp:exp, res:res, acum:acum };
+    return { ym:x.ym, inc:inc, exp:exp, res:inc-exp, acum:patrimonioAte(x.ym) };
   });
 }
 
@@ -871,7 +903,8 @@ function render(){
     : '<div class="hl-extra"><div class="hl-extra-blk">'
         +contas.map(function(it){ return '<div class="hl-extra-item"><span>'+esc(it.label)+'</span><b>'+money(it.value)+'</b></div>'; }).join("")
         +'</div></div>';
-  extraHtml += '<div class="hl-caixa-sub" style="margin-top:10px">patrimônio em '+ymLabel(state.month)+': <b style="color:#cfe0ff">'+money(c.saldoAcumulado)+'</b></div>';
+  var patrimonio = c.saldoAcumulado===null ? "—" : money(c.saldoAcumulado);
+  extraHtml += '<div class="hl-caixa-sub" style="margin-top:10px">patrimônio em '+ymLabel(state.month)+': <b style="color:#cfe0ff">'+patrimonio+'</b></div>';
 
   /* situação (Pago / Recebido) */
   var pendHtml;
@@ -936,7 +969,7 @@ function render(){
         return '<div class="hl-evorow'+(x.ym===state.month?" on":"")+'" data-act="goto" data-id="'+x.ym+'">'
           +'<span class="hl-evo-m">'+ymLabel(x.ym)+'</span>'
           +'<span class="hl-evo-res '+(x.res>=0?"pos":"neg")+'">'+(x.res>=0?"+ ":"− ")+money(Math.abs(x.res))+'</span>'
-          +'<span class="hl-evo-track"><i style="width:'+(Math.abs(x.acum)/maxA*100)+'%;background:'+(x.acum>=0?"#43e06a":"#ff3b4a")+'"></i><b>'+money(x.acum)+'</b></span>'
+          +'<span class="hl-evo-track"><i style="width:'+(Math.abs(x.acum)/maxA*100)+'%;background:'+(x.acum>=0?"#43e06a":"#ff3b4a")+'"></i><b>'+(x.acum===null?"—":money(x.acum))+'</b></span>'
           +'</div>';
       }).join("")+'</div>';
   }
@@ -962,10 +995,10 @@ function render(){
            c.deltaExp!=null?((c.deltaExp>=0?"▲":"▼")+" "+pct(Math.abs(c.deltaExp))+" vs "+ymLabel(c.prevYM)):null,
            c.deltaExp!=null&&c.deltaExp<0)
       +hud("A Força","saldo do ciclo",money(c.balance),good?"#2ea6ff":"#ff3b4a")
-      +hud("Patrimônio","acumulado até "+ymLabel(state.month),money(c.saldoAcumulado),c.saldoAcumulado>=0?"#43e06a":"#ff3b4a")
+      +hud("Patrimônio",c.saldoAcumulado===null?"antes do saldo de "+dataBR(SALDO_DATA):"acumulado até "+ymLabel(state.month),patrimonio,c.saldoAcumulado>=0?"#43e06a":"#ff3b4a")
     +'</section>'
     +'<div class="hl-grid"><div class="hl-col">'
-      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Ponto de partida</h2><p>aba EXTRA da planilha</p></div></div>'+extraHtml+'</section>'
+      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Ponto de partida</h2><p>saldo em '+dataBR(SALDO_DATA)+' (aba EXTRA)</p></div></div>'+extraHtml+'</section>'
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Pago x em aberto</h2><p>colunas Pago e Recebido</p></div></div>'+pendHtml+'</section>'
       +sidePanels
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Mapa de tipos</h2><p>distribuição dos gastos</p></div></div>'+donut+'</section>'
