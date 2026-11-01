@@ -271,6 +271,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .hl-tx-flag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.06em;padding:1px 6px;border-radius:99px;vertical-align:middle;margin-left:6px;}
 .hl-tx-flag.no{background:rgba(255,59,74,.15);color:#ff9aa4;border:1px solid rgba(255,59,74,.3);}
 .hl-tx-flag.ok{background:rgba(67,224,106,.13);color:#7fe6a0;border:1px solid rgba(67,224,106,.3);}
+.hl-sabers.metas{max-height:none;overflow:visible;margin-right:0;padding-right:0;gap:10px;}
+.hl-sabers.metas .saber-row{grid-template-columns:165px 1fr 130px;}
+.hl-sabers.metas .saber-val small{display:block;font-family:inherit;font-size:10px;font-weight:400;color:var(--mut);margin-top:2px;}
+.hl-sabers.metas .saber-val small.over{color:#ff9aa4;}
+.hl-metas-total{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:0 0 12px;margin-bottom:12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--mut);}
+.hl-metas-total b{font-family:Orbitron;font-size:16px;color:#fff;}
+.hl-metas-total em{font-style:normal;margin-left:auto;}
+@media (max-width:880px){.hl-sabers.metas .saber-row{grid-template-columns:1fr auto;gap:2px 8px;}.hl-sabers.metas .saber-track{grid-row:2;grid-column:1 / -1;}}
 .hl-foot a{color:var(--mut);text-decoration:none;border-bottom:1px dotted rgba(138,153,189,.5);}
 .hl-foot a:hover{color:var(--ink);}
 </style>
@@ -407,10 +415,49 @@ function parseCSV(text){
   return rows;
 }
 
+/* ---------- tipos de gasto e metas mensais do casal ---------- */
+/* meta null = sem meta. "termos" valem na coluna Descrição e dentro do Nome;
+   "antigos" são nomes usados nas abas de antes de dez/2026 e valem só na Descrição. */
+var CATEGORIAS = [
+  { nome:"Moradia", meta:3500, cor:"#ff3b4a", termos:["aluguel","condominio","agua","gas","luz","iptu","internet"] },
+  { nome:"Compras da casa", meta:200, cor:"#a855f7", termos:["panela","panelas","fue","vaso","chuveiro"], antigos:["contas de casa"] },
+  { nome:"Mercado", meta:1200, cor:"#43e06a", termos:["mercado","supermercado"] },
+  { nome:"Restaurantes", meta:400, cor:"#ffb648", termos:["restaurante"], antigos:["comer fora","saidas"] },
+  { nome:"Lazer e Hobby", meta:300, cor:"#22d3ee", termos:["lazer","hobby","hobbies"] },
+  { nome:"Uber", meta:200, cor:"#2ea6ff", termos:["uber","99"] },
+  { nome:"Viagens", meta:null, cor:"#7c5cff", termos:["blablacar","passagem","passagens","hotel","hoteis","viagem"] },
+  { nome:"Saúde", meta:500, cor:"#f5f7ff", termos:["saude","consulta","remedio","remedios"], antigos:["remedios e saude"] },
+  { nome:"Cosméticos e higiene", meta:200, cor:"#ff5ed1", termos:["maquiagem","cotonete","demaquilante"] },
+  { nome:"Roupas", meta:300, cor:"#ff84d8", termos:["roupa","roupas"], antigos:["roupas e acessorios","roupas e afins"] },
+  { nome:"Presentes", meta:200, cor:"#ffd84d", termos:["presente","presentes"] },
+  { nome:"Ferramentas de trabalho", meta:1000, cor:"#00d1b2", termos:["ferramenta","ferramentas","mac","macbook","aparelho","aparelhos"], antigos:["trabalho"] },
+  { nome:"Impostos", meta:350, cor:"#ff9a3c", termos:["imposto","mei","iof"] },
+  { nome:"Cidadania", meta:null, cor:"#5ec8ff", termos:["cidadania"] },
+  { nome:"Celular", meta:100, cor:"#c084fc", termos:["celular"] },
+  { nome:"Outro", meta:null, cor:"#7d8aa8", termos:[], antigos:["outros"] }
+];
+var CAT_OUTRO = CATEGORIAS[CATEGORIAS.length-1];
+var CAT_EXATA = {};
+CATEGORIAS.forEach(function(c){
+  [c.nome].concat(c.termos, c.antigos||[]).forEach(function(t){ CAT_EXATA[norm(t)] = c; });
+  c.re = c.termos.length ? new RegExp("(^|[^a-z0-9])("+c.termos.join("|")+")([^a-z0-9]|$)") : null;
+});
+/* 1º a coluna Descrição; se ela não disser, procura no Nome; senão é Outro */
+function categoriaDe(desc, nome){
+  var d = norm(desc), n = norm(nome);
+  if(CAT_EXATA[d]) return CAT_EXATA[d];
+  for(var i=0;i<CATEGORIAS.length;i++){
+    if(CATEGORIAS[i].re && CATEGORIAS[i].re.test(n)) return CATEGORIAS[i];
+  }
+  return CAT_OUTRO;
+}
+
 /* ---------- leitura de uma aba de mês ---------- */
 /* Layout esperado (o parser se vira com variações):
-   [Saídas] Pessoa | Dia | Valor | Descrição | Pago   ...   [Entradas] Pessoa | Dia | Valor | Descrição | Recebido
-   Colunas extras reconhecidas se existirem: Banco, Forma de pagamento. */
+   [Saídas] Dia | Valor | Nome | Descrição | Pago   ...   [Entradas] Pessoa | Dia | Valor | Descrição | Recebido
+   Nas saídas, Nome é o texto livre e Descrição é o tipo de gasto (ver CATEGORIAS).
+   Abas sem Nome (outubro/2026) têm tudo na Descrição.
+   Colunas extras reconhecidas se existirem: Pessoa nas saídas, Banco, Forma de pagamento. */
 function findHeader(rows){
   for(var r=0;r<Math.min(rows.length,12);r++){
     var line = rows[r].map(norm);
@@ -434,13 +481,14 @@ function blockSplit(rows, hdr){
   return line2.length;
 }
 function colsIn(headerRow, from, to){
-  var idx = { dia:-1, valor:-1, desc:-1, pessoa:-1, flag:-1, banco:-1, forma:-1 };
+  var idx = { dia:-1, valor:-1, desc:-1, nome:-1, pessoa:-1, flag:-1, banco:-1, forma:-1 };
   for(var c=from;c<to && c<headerRow.length;c++){
     var h = norm(headerRow[c]);
     if(!h) continue;
     if(idx.dia<0 && h==="dia") idx.dia=c;
     else if(idx.valor<0 && h==="valor") idx.valor=c;
     else if(idx.desc<0 && h.indexOf("descri")===0) idx.desc=c;
+    else if(idx.nome<0 && h==="nome") idx.nome=c;
     else if(idx.pessoa<0 && (h==="pessoa"||h==="quem"||h==="responsavel")) idx.pessoa=c;
     else if(idx.flag<0 && (h.indexOf("pago")===0||h.indexOf("recebid")===0||h.indexOf("status")===0)) idx.flag=c;
     else if(idx.banco<0 && (h==="banco"||h==="conta")) idx.banco=c;
@@ -465,6 +513,8 @@ function readMonthSheet(rows, ym, sheetName){
       if(val===null || val===0) continue;
       var desc = cols.desc>=0 ? String(line[cols.desc]||"").trim() : "";
       if(norm(desc)==="exemplo") continue;
+      var nome = cols.nome>=0 ? String(line[cols.nome]||"").trim() : "";
+      var categoria = kind==="expenses" ? categoriaDe(desc, nome) : null;
       var pessoa = cols.pessoa>=0 ? String(line[cols.pessoa]||"").trim() : "";
       var banco = cols.banco>=0 ? String(line[cols.banco]||"").trim() : "";
       var forma = cols.forma>=0 ? String(line[cols.forma]||"").trim() : "";
@@ -476,8 +526,9 @@ function readMonthSheet(rows, ym, sheetName){
         sheet: sheetName,
         row: r+1,
         amount: Math.abs(val),
-        label: desc || (kind==="income" ? "Entrada" : "Gasto"),
-        cat: norm(desc) || (kind==="income" ? "entrada" : "sem descricao"),
+        label: nome || desc || (kind==="income" ? "Entrada" : "Gasto"),
+        cat: categoria ? norm(categoria.nome) : (norm(desc) || "entrada"),
+        catNome: categoria ? categoria.nome : "",
         refYM: refMonthYM(desc, ym),
         pessoa: pessoa,
         day: cols.dia>=0 ? parseDay(line[cols.dia]) : null,
@@ -528,6 +579,7 @@ var SABER = {
   "roupas e acessorios":"#ff5ed1","roupas e afins":"#ff5ed1","iptu":"#ff9a3c","mei":"#ff9a3c",
   "nubank":"#a855f7","itau":"#ff9a3c","claude":"#ff9a3c","outros":"#7d8aa8"
 };
+CATEGORIAS.forEach(function(c){ SABER[norm(c.nome)] = c.cor; });
 var SABER_FALLBACK = ["#2ea6ff","#43e06a","#ff3b4a","#a855f7","#ff9a3c","#22d3ee","#ffd84d","#ff5ed1","#00d1b2","#7c5cff"];
 function colorFor(cat,i){
   if(SABER[cat]) return SABER[cat];
@@ -687,7 +739,7 @@ function compute(){
   monthsUpTo(m).forEach(function(x){ acum += sumMonth(x.ym,"income") - sumMonth(x.ym,"expenses"); });
 
   var rmap={};
-  mExp.forEach(function(e){ if(!rmap[e.cat]) rmap[e.cat]={cat:e.cat,label:e.label,val:0}; rmap[e.cat].val+=e.amount; });
+  mExp.forEach(function(e){ if(!rmap[e.cat]) rmap[e.cat]={cat:e.cat,label:e.catNome,val:0}; rmap[e.cat].val+=e.amount; });
   var ranking = Object.keys(rmap).map(function(k){return rmap[k];}).sort(function(a,b){return b.val-a.val;});
 
   function group(arr, field, fallback){
@@ -725,6 +777,38 @@ function compute(){
     abertoExp:abertoExp, pagoExp:pagoExp, abertoInc:abertoInc, recebInc:recebInc, semFlag:semFlag,
     tx:tx, saldoInicial:startingProfile(), saldoAcumulado:acum, semPessoa:semPessoa,
     antigos:(d.antigos||[]).filter(belongs) };
+}
+
+/* gasto x meta: quem tem meta primeiro (mais estourado no topo); depois o resto com gasto */
+function linhasMetas(ranking){
+  var gasto={};
+  ranking.forEach(function(r){ gasto[r.cat]=r.val; });
+  var linhas = CATEGORIAS.map(function(c){ return { cat:norm(c.nome), nome:c.nome, meta:c.meta, val:gasto[norm(c.nome)]||0 }; })
+    .filter(function(l){ return l.meta!==null || l.val>0; });
+  return linhas.sort(function(a,b){
+    if((a.meta===null)!==(b.meta===null)) return a.meta===null ? 1 : -1;
+    if(a.meta===null) return b.val-a.val;
+    return b.val/b.meta - a.val/a.meta;
+  });
+}
+function metasHtml(ranking, total){
+  var linhas = linhasMetas(ranking);
+  var comMeta = linhas.filter(function(l){ return l.meta!==null; });
+  var metaTotal = comMeta.reduce(function(s,l){ return s+l.meta; },0);
+  var gastoComMeta = comMeta.reduce(function(s,l){ return s+l.val; },0);
+  var linhasHtml = linhas.map(function(l){
+    var over = l.meta!==null && l.val>l.meta;
+    var col = l.meta===null ? "#7d8aa8" : (over ? "#ff3b4a" : (l.val>=l.meta*0.85 ? "#ffd84d" : "#43e06a"));
+    var w = l.meta===null ? 0 : Math.min(100, l.val/l.meta*100);
+    var nota = l.meta===null ? "sem meta"
+      : (over ? "passou "+money(l.val-l.meta) : "de "+money(l.meta));
+    return '<div class="saber-row"><span class="saber-label">'+esc(l.nome)+'</span>'
+      +'<span class="saber-track">'+(l.meta===null?'':'<span class="saber-hilt"></span><span class="saber-blade" style="--c:'+col+';width:'+w+'%"></span>')+'</span>'
+      +'<span class="saber-val">'+money(l.val)+'<small class="'+(over?"over":"")+'">'+nota+'</small></span></div>';
+  }).join("");
+  return '<div class="hl-metas-total"><span>Gasto nos tipos com meta</span><b>'+money(gastoComMeta)+'</b><small>de '+money(metaTotal)+'</small>'
+    +(total>gastoComMeta?'<em>+ '+money(total-gastoComMeta)+' sem meta</em>':'')+'</div>'
+    +'<div class="hl-sabers metas">'+linhasHtml+'</div>';
 }
 
 /* quadro por responsável no mês selecionado */
@@ -766,7 +850,7 @@ function donutSVG(ranking,total){
   var circles=segs.map(function(s){
     return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+s.color+'" stroke-width="14" stroke-dasharray="'+s.dash+' '+(circ-s.dash)+'" stroke-dashoffset="'+s.offset+'" transform="rotate(-90 '+cx+' '+cy+')" style="filter:drop-shadow(0 0 4px '+s.color+')"></circle>';
   }).join("");
-  var legend=segs.slice(0,7).map(function(s){return '<li><span class="dot" style="background:'+s.color+'"></span><span class="lbl">'+esc(s.label)+'</span><b>'+pct(s.val/total*100)+'</b></li>';}).join("");
+  var legend=segs.map(function(s){return '<li><span class="dot" style="background:'+s.color+'"></span><span class="lbl">'+esc(s.label)+'</span><b>'+pct(s.val/total*100)+'</b></li>';}).join("");
   return '<div class="hl-donut"><svg viewBox="0 0 140 140"><circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"></circle>'
     +circles+'<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" class="hl-donut-top">'+pct(top.val/total*100)+'</text>'
     +'<text x="'+cx+'" y="'+(cy+12)+'" text-anchor="middle" class="hl-donut-lbl">'+esc(top.label)+'</text></svg><ul class="hl-legend">'+legend+'</ul></div>';
@@ -918,7 +1002,7 @@ function render(){
     : '<div class="hl-tx">'+c.tx.map(function(t){
         var dot = t.kind==="income" ? "#43e06a" : colorFor(t.cat,0);
         var who = pessoaKey(t.pessoa) ? titleCase(t.pessoa) : "";
-        var sub = [who, t.banco, t.forma].filter(Boolean).join(" · ");
+        var sub = [t.catNome, who, t.banco, t.forma].filter(Boolean).join(" · ");
         var flag = t.flag===false ? '<span class="hl-tx-flag no">em aberto</span>'
                  : t.flag===true ? '<span class="hl-tx-flag ok">'+(t.kind==="income"?"recebido":"pago")+'</span>' : '';
         return '<div class="hl-txrow '+t.kind+'">'
@@ -989,7 +1073,9 @@ function render(){
     +'</div><div class="hl-col wide">'
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Patrimônio por responsável</h2><p>resultado do mês x acumulado em '+ymLabel(state.month)+'</p></div></div>'+quadroHtml+'</section>'
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Evolução do patrimônio</h2><p>fechamento de cada mês da planilha'+(isGalaxia?" (Galáxia)":"")+'</p></div></div>'+evoHtml+'</section>'
-      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Os mais procurados</h2><p>onde a Força mais escapou neste ciclo</p></div></div>'+sabers+'</section>'
+      +(isGalaxia
+        ? '<section class="hl-panel"><div class="hl-panel-head"><div><h2>Metas por tipo</h2><p>gasto do ciclo x meta mensal do casal</p></div></div>'+metasHtml(c.ranking,c.totalExp)+'</section>'
+        : '<section class="hl-panel"><div class="hl-panel-head"><div><h2>Os mais procurados</h2><p>onde a Força mais escapou neste ciclo</p></div></div>'+sabers+'</section>')
       +'<section class="hl-panel hl-panel-fill"><div class="hl-panel-head"><div><h2>Registro de bordo</h2><p>movimentos de '+ymLabel(state.month)+'</p></div></div><div class="hl-tx-scroll">'+txHtml+'</div></section>'
     +'</div></div>'
     +'<footer class="hl-foot"><span class="on">● Planilha conectada</span> · atualizado às '+hora
