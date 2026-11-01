@@ -33,14 +33,7 @@ body{margin:0;min-height:100vh;background:radial-gradient(1200px 700px at 70% -1
 select,input{font-family:Inter;}
 .hl-ciclo select{background:var(--hull);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 10px;}
 
-.hl-tabs{display:flex;gap:8px;margin:22px 0 14px;flex-wrap:wrap;}
-.hl-tab{display:flex;align-items:center;gap:8px;background:var(--hull);border:1px solid var(--line);color:var(--mut);
-  padding:9px 16px;border-radius:999px;font-family:Orbitron;font-size:12px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:.18s;}
-.hl-tab:hover{color:var(--ink);}
-.hl-tab.on{color:#fff;border-color:var(--c);box-shadow:0 0 0 1px var(--c),0 0 18px -6px var(--c);background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);}
-.hl-tab-dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 8px currentColor;}
-
-.hl-status{font-family:Orbitron;font-size:12px;letter-spacing:.08em;padding:10px 14px;border-radius:10px;margin-bottom:14px;border:1px solid var(--line);}
+.hl-status{margin-top:20px;font-family:Orbitron;font-size:12px;letter-spacing:.08em;padding:10px 14px;border-radius:10px;margin-bottom:14px;border:1px solid var(--line);}
 .hl-status.good{color:#9be8b4;background:rgba(67,224,106,.07);border-color:rgba(67,224,106,.25);}
 .hl-status.bad{color:#ff9aa4;background:rgba(255,59,74,.07);border-color:rgba(255,59,74,.25);}
 
@@ -165,16 +158,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .hl-bank-val{font-family:Orbitron;font-size:11px;color:#fff;}
 
 /* Quadro de patrimonio (fluxo x estoque) */
-.hl-quadro{display:flex;flex-direction:column;gap:10px;}
-.hl-qrow{display:grid;grid-template-columns:1.1fr 1fr 1fr;align-items:center;gap:12px;background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
-.hl-qrow.total{background:rgba(67,224,106,.07);border-color:rgba(67,224,106,.3);}
-.hl-qrow.on{box-shadow:0 0 0 1px rgba(255,255,255,.18);}
-.hl-qname{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);}
-.hl-qname i{width:10px;height:10px;border-radius:99px;display:inline-block;}
-.hl-qcell{display:flex;flex-direction:column;gap:2px;}
-.hl-qcell small{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);}
-.hl-qcell b{font-family:Orbitron;font-size:15px;color:#fff;}
-.hl-qcell b.pos{color:#43e06a;} .hl-qcell b.neg{color:#ff3b4a;}
 
 /* Evolucao do patrimonio (mes a mes) */
 .hl-evo{display:flex;flex-direction:column;gap:8px;}
@@ -235,7 +218,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   .hl-kpis{grid-template-columns:1fr;}
   .hl-row2{grid-template-columns:1fr;}
   .hl-facts{grid-template-columns:1fr;}
-  .hl-qrow{grid-template-columns:1fr;gap:8px;}
   .hl-evohead{display:none;}
   .hl-evorow{grid-template-columns:80px 100px 1fr;gap:8px;}
   .saber-row{grid-template-columns:100px 1fr auto;}
@@ -256,10 +238,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .hl-warn b{color:#ffd84d;font-weight:600;}
 .hl-extra{display:flex;flex-direction:column;gap:9px;}
 .hl-extra-blk{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:rgba(255,255,255,.02);}
-.hl-extra-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:7px;}
-.hl-extra-head span{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--ink);}
-.hl-extra-head i{width:9px;height:9px;border-radius:99px;display:inline-block;}
-.hl-extra-head b{font-family:Orbitron;font-size:13px;color:#fff;}
 .hl-extra-item{display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--mut);padding:2px 0;}
 .hl-extra-item b{color:#cfe0ff;font-weight:600;font-variant-numeric:tabular-nums;}
 .hl-pend{display:flex;flex-direction:column;gap:9px;}
@@ -315,7 +293,6 @@ function money(n){ return BRL.format(Number(n)||0); }
 function pct(n){ return (Number(n)||0).toFixed(0) + "%"; }
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
 function norm(s){ return String(s==null?"":s).normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim(); }
-function titleCase(s){ s=String(s||"").trim(); return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
 
 var MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 var MESES_AB = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
@@ -454,10 +431,10 @@ function categoriaDe(desc, nome){
 
 /* ---------- leitura de uma aba de mês ---------- */
 /* Layout esperado (o parser se vira com variações):
-   [Saídas] Dia | Valor | Nome | Descrição | Pago   ...   [Entradas] Pessoa | Dia | Valor | Descrição | Recebido
+   [Saídas] Dia | Valor | Nome | Descrição | Pago   ...   [Entradas] Dia | Valor | Descrição | Recebido
    Nas saídas, Nome é o texto livre e Descrição é o tipo de gasto (ver CATEGORIAS).
    Abas sem Nome (outubro/2026) têm tudo na Descrição.
-   Colunas extras reconhecidas se existirem: Pessoa nas saídas, Banco, Forma de pagamento. */
+   Colunas extras reconhecidas se existirem: Banco, Forma de pagamento. */
 function findHeader(rows){
   for(var r=0;r<Math.min(rows.length,12);r++){
     var line = rows[r].map(norm);
@@ -481,7 +458,7 @@ function blockSplit(rows, hdr){
   return line2.length;
 }
 function colsIn(headerRow, from, to){
-  var idx = { dia:-1, valor:-1, desc:-1, nome:-1, pessoa:-1, flag:-1, banco:-1, forma:-1 };
+  var idx = { dia:-1, valor:-1, desc:-1, nome:-1, flag:-1, banco:-1, forma:-1 };
   for(var c=from;c<to && c<headerRow.length;c++){
     var h = norm(headerRow[c]);
     if(!h) continue;
@@ -489,7 +466,6 @@ function colsIn(headerRow, from, to){
     else if(idx.valor<0 && h==="valor") idx.valor=c;
     else if(idx.desc<0 && h.indexOf("descri")===0) idx.desc=c;
     else if(idx.nome<0 && h==="nome") idx.nome=c;
-    else if(idx.pessoa<0 && (h==="pessoa"||h==="quem"||h==="responsavel")) idx.pessoa=c;
     else if(idx.flag<0 && (h.indexOf("pago")===0||h.indexOf("recebid")===0||h.indexOf("status")===0)) idx.flag=c;
     else if(idx.banco<0 && (h==="banco"||h==="conta")) idx.banco=c;
     else if(idx.forma<0 && (h.indexOf("forma")===0||h==="pagamento"||h==="metodo")) idx.forma=c;
@@ -515,7 +491,6 @@ function readMonthSheet(rows, ym, sheetName){
       if(norm(desc)==="exemplo") continue;
       var nome = cols.nome>=0 ? String(line[cols.nome]||"").trim() : "";
       var categoria = kind==="expenses" ? categoriaDe(desc, nome) : null;
-      var pessoa = cols.pessoa>=0 ? String(line[cols.pessoa]||"").trim() : "";
       var banco = cols.banco>=0 ? String(line[cols.banco]||"").trim() : "";
       var forma = cols.forma>=0 ? String(line[cols.forma]||"").trim() : "";
       if(banco) out.hasBank=true;
@@ -530,7 +505,6 @@ function readMonthSheet(rows, ym, sheetName){
         cat: categoria ? norm(categoria.nome) : (norm(desc) || "entrada"),
         catNome: categoria ? categoria.nome : "",
         refYM: refMonthYM(desc, ym),
-        pessoa: pessoa,
         day: cols.dia>=0 ? parseDay(line[cols.dia]) : null,
         flag: cols.flag>=0 ? parseFlag(line[cols.flag]) : null,
         banco: banco,
@@ -588,23 +562,14 @@ function colorFor(cat,i){
   return SABER_FALLBACK[(h + (i||0)) % SABER_FALLBACK.length];
 }
 
-/* ---------- perfis ---------- */
-var PROFILE_COLORS = { ricardo:"#2ea6ff", lais:"#ffd84d" };
-var PROFILE_DISPLAY = { ricardo:"Ricardo", lais:"Lais (linda da minha vida)" };
-/* sem Pessoa (ou "Casa") é do casal: conta só na Galáxia, não vira perfil */
-function pessoaKey(p){ var n=norm(p); return n==="casa" ? "" : n; }
-function pessoaColor(key,i){ return PROFILE_COLORS[key] || colorFor(key,i); }
-
 /* ---------- estado ---------- */
 var state = {
   authed:false, user:null, loginError:"",
-  profile:"galaxia",
   month:null,
   loading:true, error:null, loadedAt:null,
   months:[],          /* [{ym, name, gid}] ordenado */
   tx:{},              /* ym -> {expenses, income} */
   extra:[],           /* blocos da aba EXTRA */
-  people:[],          /* chaves de pessoa vistas nos lançamentos */
   hasBank:false, hasForma:false
 };
 
@@ -645,7 +610,7 @@ function loadAll(){
       return fetchText(csvUrl(s.gid)).then(function(t){ return readExtraSheet(parseCSV(t)); }).catch(function(){ return []; });
     });
     return Promise.all([Promise.all(jobs), Promise.all(extraJobs)]).then(function(res){
-      var tx={}, people={}, hasBank=false, hasForma=false;
+      var tx={}, hasBank=false, hasForma=false;
       /* o saldo da aba EXTRA já inclui tudo que é de antes da 1ª aba de mês:
          "FX de setembro" recebido em outubro não pode ser somado de novo */
       var startYM = months.length ? months[0].ym : null;
@@ -659,18 +624,11 @@ function loadAll(){
         };
         hasBank = hasBank || r.data.hasBank;
         hasForma = hasForma || r.data.hasForma;
-        r.data.expenses.concat(r.data.income).forEach(function(t){ var k=pessoaKey(t.pessoa); if(k) people[k] = true; });
       });
       state.months = months;
       state.tx = tx;
       state.extra = [].concat.apply([], res[1]);
       state.hasBank = hasBank; state.hasForma = hasForma;
-      state.extra.forEach(function(b){ if(b.items.length) people[b.key]=true; });
-      var order = ["ricardo","lais"];
-      state.people = Object.keys(people).sort(function(a,b){
-        var ia=order.indexOf(a), ib=order.indexOf(b);
-        return (ia<0?99:ia)-(ib<0?99:ib) || (a<b?-1:1);
-      });
       if(!state.month || !tx[state.month]) state.month = pickMonth(months);
       state.loading=false; state.loadedAt=new Date();
       render();
@@ -693,39 +651,29 @@ function monthSet(ym){
   var d = state.tx[ym] || { expenses:[], income:[] };
   return d;
 }
-function belongs(t){
-  if(state.profile==="galaxia") return true;
-  return pessoaKey(t.pessoa)===state.profile;
-}
 function sumMonth(ym, kind){
-  var d = monthSet(ym), arr = d[kind]||[], s=0;
-  for(var i=0;i<arr.length;i++){ if(belongs(arr[i])) s += arr[i].amount; }
+  var arr = monthSet(ym)[kind]||[], s=0;
+  for(var i=0;i<arr.length;i++){ s += arr[i].amount; }
   return s;
 }
-function sumMonthAll(ym, kind, personKey){
-  var d = monthSet(ym), arr = d[kind]||[], s=0;
-  for(var i=0;i<arr.length;i++){
-    if(personKey==null || pessoaKey(arr[i].pessoa)===personKey) s += arr[i].amount;
-  }
-  return s;
+/* saldos da aba EXTRA somados por conta, sem dono */
+function contasExtra(){
+  var mp={}, ordem=[];
+  state.extra.forEach(function(b){ b.items.forEach(function(it){
+    var k=norm(it.label);
+    if(!mp[k]){ mp[k]={ label:it.label, value:0 }; ordem.push(k); }
+    mp[k].value += it.value;
+  }); });
+  return ordem.map(function(k){ return mp[k]; });
 }
-function startingFor(personKey){
-  var s=0;
-  state.extra.forEach(function(b){ if(personKey==null || b.key===personKey) s += b.total; });
-  return s;
-}
-/* ponto de partida só conta para quem tem bloco na aba EXTRA */
-function startingProfile(){
-  if(state.profile==="galaxia") return startingFor(null);
-  return startingFor(state.profile);
-}
+function saldoInicial(){ return state.extra.reduce(function(s,b){ return s+b.total; },0); }
 function monthsUpTo(ym){ return state.months.filter(function(m){ return m.ym<=ym; }); }
 
 function compute(){
   var m = state.month;
   var d = monthSet(m);
-  var mExp = (d.expenses||[]).filter(belongs);
-  var mInc = (d.income||[]).filter(belongs);
+  var mExp = d.expenses||[];
+  var mInc = d.income||[];
   var totalExp = mExp.reduce(function(s,e){return s+e.amount;},0);
   var totalInc = mInc.reduce(function(s,e){return s+e.amount;},0);
   var balance = totalInc-totalExp;
@@ -735,7 +683,7 @@ function compute(){
   var prevExp = pm ? sumMonth(pm,"expenses") : 0;
   var deltaExp = (pm && prevExp>0 && totalExp>0) ? (totalExp-prevExp)/prevExp*100 : null;
 
-  var acum = startingProfile();
+  var acum = saldoInicial();
   monthsUpTo(m).forEach(function(x){ acum += sumMonth(x.ym,"income") - sumMonth(x.ym,"expenses"); });
 
   var rmap={};
@@ -769,14 +717,11 @@ function compute(){
       return b.amount-a.amount;
     });
 
-  var semPessoa = (d.expenses||[]).concat(d.income||[]).filter(function(t){return !pessoaKey(t.pessoa);}).length;
-
   return { mExp:mExp, mInc:mInc, totalExp:totalExp, totalInc:totalInc, balance:balance,
     deltaExp:deltaExp, prevYM:pm, ranking:ranking, banks:banks, formas:formas,
     weeks:weeks, weeksInc:weeksInc, temData:temData, semData:semData,
     abertoExp:abertoExp, pagoExp:pagoExp, abertoInc:abertoInc, recebInc:recebInc, semFlag:semFlag,
-    tx:tx, saldoInicial:startingProfile(), saldoAcumulado:acum, semPessoa:semPessoa,
-    antigos:(d.antigos||[]).filter(belongs) };
+    tx:tx, saldoAcumulado:acum, antigos:d.antigos||[] };
 }
 
 /* gasto x meta: quem tem meta primeiro (mais estourado no topo); depois o resto com gasto */
@@ -811,24 +756,9 @@ function metasHtml(ranking, total){
     +'<div class="hl-sabers metas">'+linhasHtml+'</div>';
 }
 
-/* quadro por responsável no mês selecionado */
-function quadroPatrimonio(m){
-  var linhas = state.people.map(function(k){
-    var res = sumMonthAll(m,"income",k) - sumMonthAll(m,"expenses",k);
-    var acum = startingFor(k);
-    monthsUpTo(m).forEach(function(x){ acum += sumMonthAll(x.ym,"income",k) - sumMonthAll(x.ym,"expenses",k); });
-    return { id:k, nome:titleCase(k), res:res, acum:acum };
-  });
-  /* Galáxia soma tudo, inclusive o que está sem Pessoa */
-  var res = sumMonthAll(m,"income",null) - sumMonthAll(m,"expenses",null);
-  var acum = startingFor(null);
-  monthsUpTo(m).forEach(function(x){ acum += sumMonthAll(x.ym,"income",null) - sumMonthAll(x.ym,"expenses",null); });
-  linhas.push({ id:"galaxia", nome:"Galáxia", res:res, acum:acum });
-  return linhas;
-}
-/* evolução mês a mês do conjunto selecionado */
+/* evolução mês a mês */
 function evolucao(){
-  var acum = startingProfile();
+  var acum = saldoInicial();
   return state.months.map(function(x){
     var inc = sumMonth(x.ym,"income"), exp = sumMonth(x.ym,"expenses");
     var res = inc-exp; acum += res;
@@ -921,39 +851,23 @@ function render(){
   }
 
   var c = compute();
-  var isGalaxia = state.profile==="galaxia";
-  var meName = isGalaxia ? "Galáxia" : (PROFILE_DISPLAY[state.profile] || titleCase(state.profile));
   var good = c.balance>=0;
   var statusLine = (c.totalInc===0&&c.totalExp===0)
     ? "Ciclo em silêncio. Nada lançado na planilha para "+ymLabel(state.month)+" ainda."
     : (good ? "A Força está com você. Saldo positivo neste ciclo."
             : "Território Sith. Os gastos passaram das entradas.");
 
-  var tabsList = [{id:"galaxia", nome:"Galáxia", cor:"#43e06a"}].concat(state.people.map(function(k,i){
-    return { id:k, nome:titleCase(k), cor:pessoaColor(k,i) };
-  }));
-  var tabs = tabsList.map(function(p){
-    var on = state.profile===p.id;
-    return '<button class="hl-tab '+(on?"on":"")+'" '+(on?'style="--c:'+p.cor+'"':'')+' data-act="tab" data-id="'+p.id+'">'
-      +'<span class="hl-tab-dot" style="background:'+p.cor+'"></span>'+esc(p.nome)+'</button>';
-  }).join("");
-
   var monthOptions = state.months.map(function(m){
     return '<option value="'+m.ym+'"'+(m.ym===state.month?' selected':'')+'>'+esc(m.name)+'</option>';
   }).join("");
 
   /* ponto de partida (aba EXTRA) */
-  var extraBlocks = state.extra.filter(function(b){ return isGalaxia || b.key===state.profile; });
-  var extraHtml = extraBlocks.length===0
-    ? emptyBox(isGalaxia
-        ? "Sem aba de saldos. Crie uma aba chamada <b>EXTRA</b> com o nome de cada um na 1ª linha e, abaixo, a conta e o valor ao lado."
-        : "Sem bloco de "+esc(meName)+" na aba EXTRA.")
-    : '<div class="hl-extra">'+extraBlocks.map(function(b,i){
-        return '<div class="hl-extra-blk"><div class="hl-extra-head">'
-          +'<span><i style="background:'+pessoaColor(b.key,i)+'"></i>'+esc(b.name)+'</span><b>'+money(b.total)+'</b></div>'
-          +b.items.map(function(it){ return '<div class="hl-extra-item"><span>'+esc(it.label)+'</span><b>'+money(it.value)+'</b></div>'; }).join("")
-          +'</div>';
-      }).join("")+'</div>';
+  var contas = contasExtra();
+  var extraHtml = contas.length===0
+    ? emptyBox("Sem aba de saldos. Crie uma aba chamada <b>EXTRA</b> com a conta e o valor ao lado.")
+    : '<div class="hl-extra"><div class="hl-extra-blk">'
+        +contas.map(function(it){ return '<div class="hl-extra-item"><span>'+esc(it.label)+'</span><b>'+money(it.value)+'</b></div>'; }).join("")
+        +'</div></div>';
   extraHtml += '<div class="hl-caixa-sub" style="margin-top:10px">patrimônio em '+ymLabel(state.month)+': <b style="color:#cfe0ff">'+money(c.saldoAcumulado)+'</b></div>';
 
   /* situação (Pago / Recebido) */
@@ -991,18 +905,10 @@ function render(){
     if(c.semData) weeksHtml += '<div class="hl-warn">'+c.semData+' lançamento(s) sem dia — ficaram de fora das barras, mas contam nos totais.</div>';
   }
 
-  var rankMax = c.ranking.length ? c.ranking[0].val : 1;
-  var sabers = c.ranking.length===0 ? emptyBox("Nenhum gasto neste ciclo.")
-    : '<div class="hl-sabers">'+c.ranking.map(function(r,i){ var col=colorFor(r.cat,i);
-        return '<div class="saber-row"><span class="saber-label">'+esc(r.label)+'</span>'
-          +'<span class="saber-track"><span class="saber-hilt"></span><span class="saber-blade" style="--c:'+col+';width:'+(r.val/rankMax*100)+'%"></span></span>'
-          +'<span class="saber-val">'+money(r.val)+'</span></div>'; }).join("")+'</div>';
-
   var txHtml = c.tx.length===0 ? emptyBox("Nada lançado neste ciclo ainda.")
     : '<div class="hl-tx">'+c.tx.map(function(t){
         var dot = t.kind==="income" ? "#43e06a" : colorFor(t.cat,0);
-        var who = pessoaKey(t.pessoa) ? titleCase(t.pessoa) : "";
-        var sub = [t.catNome, who, t.banco, t.forma].filter(Boolean).join(" · ");
+        var sub = [t.catNome, t.banco, t.forma].filter(Boolean).join(" · ");
         var flag = t.flag===false ? '<span class="hl-tx-flag no">em aberto</span>'
                  : t.flag===true ? '<span class="hl-tx-flag ok">'+(t.kind==="income"?"recebido":"pago")+'</span>' : '';
         return '<div class="hl-txrow '+t.kind+'">'
@@ -1013,18 +919,8 @@ function render(){
           +'</div>';
       }).join("")+'</div>';
 
-  var quadro = quadroPatrimonio(state.month);
-  var quadroHtml = '<div class="hl-quadro">'+quadro.map(function(q,i){
-    var col = q.id==="galaxia" ? "#43e06a" : pessoaColor(q.id,i);
-    return '<div class="hl-qrow'+(q.id==="galaxia"?" total":"")+(q.id===state.profile?" on":"")+'">'
-      +'<span class="hl-qname"><i style="background:'+col+'"></i>'+esc(q.nome)+'</span>'
-      +'<span class="hl-qcell"><small>resultado do mês</small><b class="'+(q.res>=0?"pos":"neg")+'">'+(q.res>=0?"+ ":"− ")+money(Math.abs(q.res))+'</b></span>'
-      +'<span class="hl-qcell"><small>saldo acumulado</small><b>'+money(q.acum)+'</b></span>'
-      +'</div>';
-  }).join("")+'</div>';
-  if(c.antigos.length) quadroHtml += '<div class="hl-warn">Fora da conta (já estão no saldo da aba EXTRA): '
-    + c.antigos.map(function(t){ return esc(t.label)+' '+money(t.amount); }).join(' · ') + '.</div>';
-  if(c.semPessoa) quadroHtml += '<div class="hl-warn">'+c.semPessoa+' lançamento(s) de '+ymLabel(state.month)+' estão sem a coluna <b>Pessoa</b> — contam só na <b>Galáxia</b>.</div>';
+  var antigosHtml = c.antigos.length ? '<div class="hl-warn">Fora da conta (já estão no saldo da aba EXTRA): '
+    + c.antigos.map(function(t){ return esc(t.label)+' '+money(t.amount); }).join(' · ') + '.</div>' : '';
 
   var evo = evolucao();
   var evoHtml;
@@ -1048,13 +944,12 @@ function render(){
   var hora = state.loadedAt ? state.loadedAt.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}) : "--:--";
 
   app.innerHTML =
-    '<header class="hl-head"><div><h1 class="hl-title">'+esc(meName)+'</h1>'
+    '<header class="hl-head"><div><h1 class="hl-title">Galáxia</h1>'
       +'<p class="hl-sub">tudo que está aqui vem da planilha — para mudar algo, mude lá</p></div>'
       +'<div class="hl-head-right"><div class="hl-ciclo"><label>Ciclo</label><div class="row">'
       +'<select id="ciclo-aba">'+monthOptions+'</select></div></div>'
       +'<button class="hl-refresh" data-act="reload" title="Reler a planilha">↻ Atualizar</button>'
       +'<button class="hl-logout" data-act="logout" title="Sair">Sair</button></div></header>'
-    +'<nav class="hl-tabs">'+tabs+'</nav>'
     +'<div class="hl-status '+(good?"good":"bad")+'">'+statusLine+'</div>'
     +'<section class="hl-kpis">'
       +hud("Recompensas","entradas do ciclo",money(c.totalInc),"#43e06a")
@@ -1071,11 +966,8 @@ function render(){
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Mapa de tipos</h2><p>distribuição dos gastos</p></div></div>'+donut+'</section>'
       +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Linha do tempo</h2><p>entrou x saiu por semana</p></div></div>'+weeksHtml+'</section>'
     +'</div><div class="hl-col wide">'
-      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Patrimônio por responsável</h2><p>resultado do mês x acumulado em '+ymLabel(state.month)+'</p></div></div>'+quadroHtml+'</section>'
-      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Evolução do patrimônio</h2><p>fechamento de cada mês da planilha'+(isGalaxia?" (Galáxia)":"")+'</p></div></div>'+evoHtml+'</section>'
-      +(isGalaxia
-        ? '<section class="hl-panel"><div class="hl-panel-head"><div><h2>Metas por tipo</h2><p>gasto do ciclo x meta mensal do casal</p></div></div>'+metasHtml(c.ranking,c.totalExp)+'</section>'
-        : '<section class="hl-panel"><div class="hl-panel-head"><div><h2>Os mais procurados</h2><p>onde a Força mais escapou neste ciclo</p></div></div>'+sabers+'</section>')
+      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Evolução do patrimônio</h2><p>fechamento de cada mês da planilha</p></div></div>'+evoHtml+antigosHtml+'</section>'
+      +'<section class="hl-panel"><div class="hl-panel-head"><div><h2>Metas por tipo</h2><p>gasto do ciclo x meta mensal do casal</p></div></div>'+metasHtml(c.ranking,c.totalExp)+'</section>'
       +'<section class="hl-panel hl-panel-fill"><div class="hl-panel-head"><div><h2>Registro de bordo</h2><p>movimentos de '+ymLabel(state.month)+'</p></div></div><div class="hl-tx-scroll">'+txHtml+'</div></section>'
     +'</div></div>'
     +'<footer class="hl-foot"><span class="on">● Planilha conectada</span> · atualizado às '+hora
@@ -1113,7 +1005,6 @@ app.addEventListener("click",function(ev){
   var act=el.getAttribute("data-act");
   if(act==="login"){ doLogin(); }
   else if(act==="logout"){ doLogout(); }
-  else if(act==="tab"){ state.profile=el.getAttribute("data-id"); render(); }
   else if(act==="goto"){ state.month=el.getAttribute("data-id"); render(); }
   else if(act==="reload"){
     if(el.tagName==="BUTTON"){ el.disabled=true; el.textContent="↻ lendo…"; }
