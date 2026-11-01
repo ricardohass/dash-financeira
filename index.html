@@ -368,6 +368,19 @@ function sheetToYM(name){
   if(d) return Number(d[1]) + "-" + String(Number(d[2])).padStart(2,"0");
   return null;
 }
+/* "FX de setembro" na aba de outubro/2026 -> "2026-09" (ou null se não cita mês) */
+function refMonthYM(desc, ym){
+  var n = norm(desc);
+  if(!n) return null;
+  for(var i=0;i<MESES_N.length;i++){
+    if(new RegExp("(^|[^a-z])"+MESES_N[i]+"([^a-z]|$)").test(n)){
+      var a = ym.split("-").map(Number), y = a[0];
+      if(i+1 > a[1]) y -= 1; /* "dezembro" na aba de janeiro = ano anterior */
+      return y + "-" + String(i+1).padStart(2,"0");
+    }
+  }
+  return null;
+}
 function isExtraSheet(name){ return /extra|patrim|saldo|ponto de partida/.test(norm(name)); }
 
 /* ---------- CSV ---------- */
@@ -465,6 +478,7 @@ function readMonthSheet(rows, ym, sheetName){
         amount: Math.abs(val),
         label: desc || (kind==="income" ? "Entrada" : "Gasto"),
         cat: norm(desc) || (kind==="income" ? "entrada" : "sem descricao"),
+        refYM: refMonthYM(desc, ym),
         pessoa: pessoa,
         day: cols.dia>=0 ? parseDay(line[cols.dia]) : null,
         flag: cols.flag>=0 ? parseFlag(line[cols.flag]) : null,
@@ -494,7 +508,9 @@ function readExtraSheet(rows){
       var v = parseMoney(line[c+1]);
       var lbl = String(line[c]||"").trim();
       if(v===null || v===0) continue;
-      items.push({ label: lbl || "sem rótulo", value: v });
+      /* valor sem nome de conta ao lado = subtotal da planilha, não é conta */
+      if(!lbl) continue;
+      items.push({ label: lbl, value: v });
       total += v;
     }
     blocks.push({ name:name, key:norm(name), items:items, total:total });
@@ -578,8 +594,17 @@ function loadAll(){
     });
     return Promise.all([Promise.all(jobs), Promise.all(extraJobs)]).then(function(res){
       var tx={}, people={}, hasBank=false, hasForma=false;
+      /* o saldo da aba EXTRA já inclui tudo que é de antes da 1ª aba de mês:
+         "FX de setembro" recebido em outubro não pode ser somado de novo */
+      var startYM = months.length ? months[0].ym : null;
+      function jaNoExtra(t){ return !!(startYM && t.refYM && t.refYM < startYM); }
       res[0].forEach(function(r){
-        tx[r.ym] = { expenses:r.data.expenses, income:r.data.income };
+        var all = r.data.expenses.concat(r.data.income);
+        tx[r.ym] = {
+          expenses: r.data.expenses.filter(function(t){ return !jaNoExtra(t); }),
+          income: r.data.income.filter(function(t){ return !jaNoExtra(t); }),
+          antigos: all.filter(jaNoExtra)
+        };
         hasBank = hasBank || r.data.hasBank;
         hasForma = hasForma || r.data.hasForma;
         r.data.expenses.concat(r.data.income).forEach(function(t){ var k=pessoaKey(t.pessoa); if(k) people[k] = true; });
@@ -698,7 +723,8 @@ function compute(){
     deltaExp:deltaExp, prevYM:pm, ranking:ranking, banks:banks, formas:formas,
     weeks:weeks, weeksInc:weeksInc, temData:temData, semData:semData,
     abertoExp:abertoExp, pagoExp:pagoExp, abertoInc:abertoInc, recebInc:recebInc, semFlag:semFlag,
-    tx:tx, saldoInicial:startingProfile(), saldoAcumulado:acum, semPessoa:semPessoa };
+    tx:tx, saldoInicial:startingProfile(), saldoAcumulado:acum, semPessoa:semPessoa,
+    antigos:(d.antigos||[]).filter(belongs) };
 }
 
 /* quadro por responsável no mês selecionado */
@@ -912,6 +938,8 @@ function render(){
       +'<span class="hl-qcell"><small>saldo acumulado</small><b>'+money(q.acum)+'</b></span>'
       +'</div>';
   }).join("")+'</div>';
+  if(c.antigos.length) quadroHtml += '<div class="hl-warn">Fora da conta (já estão no saldo da aba EXTRA): '
+    + c.antigos.map(function(t){ return esc(t.label)+' '+money(t.amount); }).join(' · ') + '.</div>';
   if(c.semPessoa) quadroHtml += '<div class="hl-warn">'+c.semPessoa+' lançamento(s) de '+ymLabel(state.month)+' estão sem a coluna <b>Pessoa</b> — contam só na <b>Galáxia</b>.</div>';
 
   var evo = evolucao();
